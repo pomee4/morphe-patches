@@ -4,12 +4,12 @@ group = "app.morphe"
 
 patches {
     about {
-        name = "Morphe Patches"
-        description = "Patches for Morphe"
-        source = "git@github.com:MorpheApp/morphe-patches.git"
-        author = "MorpheApp"
-        contact = "na"
-        website = "https://morphe.software"
+        name = "pomee4 Patches"
+        description = "Unofficial fork of Morphe Patches, with Reddit comment swipe actions"
+        source = "git@github.com:pomee4/morphe-patches.git"
+        author = "pomee4"
+        contact = "https://github.com/pomee4/morphe-patches/issues"
+        website = "https://github.com/pomee4/morphe-patches"
         license = "GNU General Public License v3.0, with additional GPL section 7 requirements"
     }
 }
