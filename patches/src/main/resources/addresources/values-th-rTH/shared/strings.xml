@@ -100,7 +100,7 @@ Second \"item\" text"</string>
   <string name="morphe_debug_title">เปิดการบันทึกการแก้ไขข้อบกพร่อง</string>
   <string name="morphe_debug_stacktrace_title">การติดตามสแต็กบันทึกการแก้ไขข้อบกพร่อง</string>
   <string name="morphe_debug_stacktrace_summary">รวมการติดตามสแต็กในบันทึกการแก้ไขข้อบกพร่องเพื่อช่วยระบุข้อผิดพลาด</string>
-  <string name="morphe_debug_toast_on_error_title">แสดง toast เมื่อเกิดข้อผิดพลาดของ Morphe</string>
+  <string name="morphe_debug_toast_on_error_title">แสดงข้อความแจ้งเตือนชั่วคราวเมื่อเกิดข้อผิดพลาดของ Morphe</string>
   <string name="morphe_debug_toast_on_error_user_dialog_message">"การปิดข้อความแจ้งเตือนข้อผิดพลาดจะซ่อนการแจ้งเตือนข้อผิดพลาดทั้งหมดของ Morphe
 
 คุณจะไม่ได้รับแจ้งเกี่ยวกับเหตุการณ์ไม่คาดฝันใดๆ"</string>

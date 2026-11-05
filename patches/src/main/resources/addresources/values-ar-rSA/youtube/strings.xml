@@ -79,7 +79,7 @@ Second \"item\" text"</string>
   <string name="morphe_hide_post_dislike_button_summary">مع التخطيط المفروض، يُترك فراغ الزر</string>
   <string name="morphe_hide_post_comment_button_title">إخفاء زر التعليق</string>
   <string name="morphe_hide_post_comments_preview_title">إخفاء تعليقات المعاينة</string>
-  <string name="morphe_hide_post_comments_preview_summary">يُخفي معاينة التعليقات أسفل المنشورات</string>
+  <string name="morphe_hide_post_comments_preview_summary">يُخفي تعليقات المعاينة أسفل المنشورات</string>
   <string name="morphe_hide_post_share_button_title">إخفاء زر مشاركة</string>
   <string name="morphe_hide_post_share_button_summary">زر تنزيل صور المنشور مرسوم بجانب زر مشاركة، لذلك فهو مخفي أيضًا</string>
   <string name="morphe_hide_compact_banner_title">إخفاء اللافتات المصغرة</string>
