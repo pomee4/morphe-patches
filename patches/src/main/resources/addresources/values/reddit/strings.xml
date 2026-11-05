@@ -138,4 +138,25 @@ Second \"item\" text"</string>
     <string name="morphe_app_icon_choose_title">Choose app icon</string>
     <string name="morphe_app_icon_default">Default</string>
     <string name="morphe_app_icon_unknown">Unknown</string>
+
+    <string name="morphe_screen_comments_title">Comments</string>
+    <string name="morphe_comment_swipe_actions_title">Comment swipe actions</string>
+    <string name="morphe_comment_swipe_actions_summary">Swipe a comment sideways to vote, save, reply and more. How far you swipe picks the action</string>
+    <string name="morphe_comment_swipe_first_title">First swipe action</string>
+    <string name="morphe_comment_swipe_second_title">Second swipe action</string>
+    <string name="morphe_comment_swipe_third_title">Third swipe action</string>
+    <string name="morphe_comment_swipe_direction_title">Swipe direction</string>
+    <string name="morphe_comment_swipe_direction_right_to_left">Right to left</string>
+    <string name="morphe_comment_swipe_direction_left_to_right">Left to right</string>
+    <string name="morphe_comment_swipe_vibrate_title">Vibrate on each action</string>
+    <string name="morphe_comment_swipe_vibrate_summary">Vibrates when the swipe reaches the next action, even when touch vibration is off</string>
+    <string name="morphe_comment_swipe_action_none">None</string>
+    <string name="morphe_comment_swipe_action_upvote">Upvote</string>
+    <string name="morphe_comment_swipe_action_downvote">Downvote</string>
+    <string name="morphe_comment_swipe_action_reply">Reply</string>
+    <string name="morphe_comment_swipe_action_save">Save</string>
+    <string name="morphe_comment_swipe_action_share">Share</string>
+    <string name="morphe_comment_swipe_action_collapse">Collapse thread</string>
+    <string name="morphe_comment_swipe_action_overflow">More options</string>
+    <string name="morphe_comment_swipe_action_profile">Open profile</string>
 </resources>

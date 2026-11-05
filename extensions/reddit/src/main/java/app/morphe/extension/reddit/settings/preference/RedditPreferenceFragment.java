@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.ListView;
 
 import app.morphe.extension.reddit.settings.preference.categories.AdsPreferenceCategory;
+import app.morphe.extension.reddit.settings.preference.categories.CommentsPreferenceCategory;
 import app.morphe.extension.reddit.settings.preference.categories.LayoutPreferenceCategory;
 import app.morphe.extension.reddit.settings.preference.categories.MiscellaneousPreferenceCategory;
 import app.morphe.extension.reddit.settings.preference.categories.NavigationBarPreferenceCategory;
@@ -39,6 +40,7 @@ public class RedditPreferenceFragment extends AbstractPreferenceFragment {
         new NavigationBarPreferenceCategory(context, preferenceScreen);
         new SidebarPreferenceCategory(context, preferenceScreen);
         new LayoutPreferenceCategory(context, preferenceScreen);
+        new CommentsPreferenceCategory(context, preferenceScreen);
         new MiscellaneousPreferenceCategory(context, preferenceScreen);
     }
 

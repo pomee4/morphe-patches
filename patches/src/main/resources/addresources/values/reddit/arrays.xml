@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="morphe_comment_swipe_first_entries">
+        <item>@string/morphe_comment_swipe_action_none</item>
+        <item>@string/morphe_comment_swipe_action_upvote</item>
+        <item>@string/morphe_comment_swipe_action_downvote</item>
+        <item>@string/morphe_comment_swipe_action_reply</item>
+        <item>@string/morphe_comment_swipe_action_save</item>
+        <item>@string/morphe_comment_swipe_action_share</item>
+        <item>@string/morphe_comment_swipe_action_collapse</item>
+        <item>@string/morphe_comment_swipe_action_overflow</item>
+        <item>@string/morphe_comment_swipe_action_profile</item>
+    </string-array>
+    <string-array name="morphe_comment_swipe_first_entry_values" translatable="false">
+        <item>NONE</item>
+        <item>UPVOTE</item>
+        <item>DOWNVOTE</item>
+        <item>REPLY</item>
+        <item>SAVE</item>
+        <item>SHARE</item>
+        <item>COLLAPSE</item>
+        <item>OVERFLOW</item>
+        <item>PROFILE</item>
+    </string-array>
+    <string-array name="morphe_comment_swipe_second_entries">
+        <item>@string/morphe_comment_swipe_action_none</item>
+        <item>@string/morphe_comment_swipe_action_upvote</item>
+        <item>@string/morphe_comment_swipe_action_downvote</item>
+        <item>@string/morphe_comment_swipe_action_reply</item>
+        <item>@string/morphe_comment_swipe_action_save</item>
+        <item>@string/morphe_comment_swipe_action_share</item>
+        <item>@string/morphe_comment_swipe_action_collapse</item>
+        <item>@string/morphe_comment_swipe_action_overflow</item>
+        <item>@string/morphe_comment_swipe_action_profile</item>
+    </string-array>
+    <string-array name="morphe_comment_swipe_second_entry_values" translatable="false">
+        <item>NONE</item>
+        <item>UPVOTE</item>
+        <item>DOWNVOTE</item>
+        <item>REPLY</item>
+        <item>SAVE</item>
+        <item>SHARE</item>
+        <item>COLLAPSE</item>
+        <item>OVERFLOW</item>
+        <item>PROFILE</item>
+    </string-array>
+    <string-array name="morphe_comment_swipe_third_entries">
+        <item>@string/morphe_comment_swipe_action_none</item>
+        <item>@string/morphe_comment_swipe_action_upvote</item>
+        <item>@string/morphe_comment_swipe_action_downvote</item>
+        <item>@string/morphe_comment_swipe_action_reply</item>
+        <item>@string/morphe_comment_swipe_action_save</item>
+        <item>@string/morphe_comment_swipe_action_share</item>
+        <item>@string/morphe_comment_swipe_action_collapse</item>
+        <item>@string/morphe_comment_swipe_action_overflow</item>
+        <item>@string/morphe_comment_swipe_action_profile</item>
+    </string-array>
+    <string-array name="morphe_comment_swipe_third_entry_values" translatable="false">
+        <item>NONE</item>
+        <item>UPVOTE</item>
+        <item>DOWNVOTE</item>
+        <item>REPLY</item>
+        <item>SAVE</item>
+        <item>SHARE</item>
+        <item>COLLAPSE</item>
+        <item>OVERFLOW</item>
+        <item>PROFILE</item>
+    </string-array>
+    <string-array name="morphe_comment_swipe_direction_entries">
+        <item>@string/morphe_comment_swipe_direction_right_to_left</item>
+        <item>@string/morphe_comment_swipe_direction_left_to_right</item>
+    </string-array>
+    <string-array name="morphe_comment_swipe_direction_entry_values" translatable="false">
+        <item>RIGHT_TO_LEFT</item>
+        <item>LEFT_TO_RIGHT</item>
+    </string-array>
+</resources>

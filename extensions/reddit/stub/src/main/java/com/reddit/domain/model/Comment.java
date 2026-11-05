@@ -9,6 +9,18 @@ public final class Comment extends IComment {
         throw new UnsupportedOperationException("Stub");
     }
 
+    public String getId() {
+        throw new UnsupportedOperationException("Stub");
+    }
+
+    public String getAuthor() {
+        throw new UnsupportedOperationException("Stub");
+    }
+
+    public boolean getSaved() {
+        throw new UnsupportedOperationException("Stub");
+    }
+
     /**
      * Added during patching by the Remember collapsed comments patch.
      */

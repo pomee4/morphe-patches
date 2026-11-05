@@ -11,7 +11,10 @@ import static java.lang.Boolean.TRUE;
 import static app.morphe.extension.shared.settings.Setting.migrateOldSettingToNew;
 
 import app.morphe.extension.shared.settings.BaseSettings;
+import app.morphe.extension.reddit.patches.CommentSwipeActionsPatch.SwipeAction;
+import app.morphe.extension.reddit.patches.CommentSwipeActionsPatch.SwipeDirection;
 import app.morphe.extension.shared.settings.BooleanSetting;
+import app.morphe.extension.shared.settings.EnumSetting;
 import app.morphe.extension.shared.settings.FloatSetting;
 import app.morphe.extension.shared.settings.StringSetting;
 
@@ -19,6 +22,14 @@ public class Settings extends BaseSettings {
     // Ads
     public static final BooleanSetting HIDE_COMMENT_ADS = new BooleanSetting("morphe_hide_comment_ads", TRUE, true);
     public static final BooleanSetting HIDE_POST_ADS = new BooleanSetting("morphe_hide_post_ads", TRUE, true);
+
+    // Comments
+    public static final BooleanSetting COMMENT_SWIPE_ACTIONS = new BooleanSetting("morphe_comment_swipe_actions", TRUE);
+    public static final EnumSetting<SwipeAction> COMMENT_SWIPE_FIRST = new EnumSetting<>("morphe_comment_swipe_first", SwipeAction.UPVOTE);
+    public static final EnumSetting<SwipeAction> COMMENT_SWIPE_SECOND = new EnumSetting<>("morphe_comment_swipe_second", SwipeAction.SAVE);
+    public static final EnumSetting<SwipeAction> COMMENT_SWIPE_THIRD = new EnumSetting<>("morphe_comment_swipe_third", SwipeAction.REPLY);
+    public static final BooleanSetting COMMENT_SWIPE_VIBRATE = new BooleanSetting("morphe_comment_swipe_vibrate", TRUE);
+    public static final EnumSetting<SwipeDirection> COMMENT_SWIPE_DIRECTION = new EnumSetting<>("morphe_comment_swipe_direction", SwipeDirection.RIGHT_TO_LEFT);
 
     // Layout
     public static final BooleanSetting COPY_TEXT = new BooleanSetting("morphe_copy_text", FALSE, true, "morphe_copy_text_user_dialog_message");
