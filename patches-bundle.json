@@ -1,7 +1,7 @@
 {
-  "created_at": "",
-  "description": "",
-  "download_url": "",
+  "created_at": "2026-11-05T19:12:55",
+  "description": "## [2.1.0](https://github.com/pomee4/morphe-patches/compare/v2.0.0...v2.1.0) (2026-11-05)\n\n### ✨ New Features\n\n* **Reddit:** Add `Comment swipe actions` patch ([244f91f](https://github.com/pomee4/morphe-patches/commit/244f91f7803be7a1ee56a16aef0c25f1c4637bb4))",
+  "download_url": "https://github.com/pomee4/morphe-patches/releases/download/v2.1.0/patches-2.1.0.mpp",
   "signature_download_url": "",
-  "version": ""
+  "version": "2.1.0"
 }

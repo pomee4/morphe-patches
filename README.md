@@ -12,7 +12,7 @@ not made or supported by the Morphe project. It has all the upstream patches, pl
 Add `https://github.com/pomee4/morphe-patches` as a patch source in Morphe Manager.
 
 <!-- PATCHES_START -->
-> **[v2.0.0](https://github.com/MorpheApp/morphe-patches/releases/tag/v2.0.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;194 patches total
+> **[v2.1.0](https://github.com/pomee4/morphe-patches/releases/tag/v2.1.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;195 patches total
 <details>
 <summary>📦 YouTube&nbsp;&nbsp;•&nbsp;&nbsp;109 patches</summary>
 <br>
@@ -200,7 +200,7 @@ Add `https://github.com/pomee4/morphe-patches` as a patch source in Morphe Manag
 </details>
 
 <details>
-<summary>📦 Reddit&nbsp;&nbsp;•&nbsp;&nbsp;31 patches</summary>
+<summary>📦 Reddit&nbsp;&nbsp;•&nbsp;&nbsp;32 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -211,6 +211,7 @@ Add `https://github.com/pomee4/morphe-patches` as a patch source in Morphe Manag
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
 | [App icon](#app-icon) | Adds an option to select from the Reddit app icons available in the manifest. |  |
+| [Comment swipe actions](#comment-swipe-actions) | Adds an option to swipe comments sideways to upvote, downvote, reply, save, share, collapse or open the author's profile, picked by how far the comment is swiped. |  |
 | [Copy text](#copy-text) | Adds an option to make post and comment text selectable and copyable. Disables collapsing comments. This patch works with Reddit 2026.24.0 and newer. |  |
 | [Custom branding name for Reddit](#custom-branding-name-for-reddit) | Changes the Reddit app name to the name specified in patch options. | • App name |
 | [Custom font](#custom-font) | Adds an option to replace Reddit Sans / Roboto with a custom TTF or OTF font file at runtime. |  |

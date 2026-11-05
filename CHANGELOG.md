@@ -1,3 +1,9 @@
+## [2.1.0](https://github.com/pomee4/morphe-patches/compare/v2.0.0...v2.1.0) (2026-11-05)
+
+### ✨ New Features
+
+* **Reddit:** Add `Comment swipe actions` patch ([244f91f](https://github.com/pomee4/morphe-patches/commit/244f91f7803be7a1ee56a16aef0c25f1c4637bb4))
+
 ## [2.0.0](https://github.com/MorpheApp/morphe-patches/compare/v1.48.0...v2.0.0) (2026-10-30)
 
 ### ⚠ BREAKING CHANGES
