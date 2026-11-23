@@ -1,137 +1,115 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import com.android.tools.r8.CompilationMode
+import com.android.tools.r8.D8
+import com.android.tools.r8.D8Command
+import com.android.tools.r8.OutputMode
+import com.android.tools.r8.utils.ArchiveResourceProvider
+import ru.vyarus.gradle.plugin.animalsniffer.AnimalSniffer
 
-group = "app.morphe"
+plugins {
+    // Fails the build if the patches file uses JDK APIs that do not exist on Android.
+    alias(libs.plugins.animalsniffer)
+}
+
+group = "app.pomee4"
 
 patches {
     about {
         name = "pomee4 Patches"
-        description = "Unofficial fork of Morphe Patches, with Reddit comment swipe actions"
+        description = "Reddit comment swipe actions, to use together with Morphe Patches"
         source = "git@github.com:pomee4/morphe-patches.git"
         author = "pomee4"
         contact = "https://github.com/pomee4/morphe-patches/issues"
         website = "https://github.com/pomee4/morphe-patches"
-        license = "GNU General Public License v3.0, with additional GPL section 7 requirements"
+        license = "GPLv3"
     }
 }
 
 // Separate configuration so gson is available at runtime for the
 // generatePatchesList task but never bundled into the APK.
 val patchListGeneratorClasspath = configurations.create("patchListGeneratorClasspath")
-val jamApk = providers.gradleProperty("jamApk")
-val jamOutput = providers.gradleProperty("jamOutput")
-
-// Resolve local composite build projects (smali, patcher) to jars for compilation,
-// same as the runtime classpath. Otherwise, both the classes directory and the jar
-// are passed to D8 by buildAndroid, and it fails with "Classpath type already present".
-configurations.compileClasspath {
-    attributes {
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
-    }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
-}
 
 dependencies {
-    // Required due to smali, or build fails. Can be removed once smali is bumped.
-    implementation(libs.guava)
-
-    implementation(libs.morphe.patches.library)
-
+    compileOnly(libs.gson)
     patchListGeneratorClasspath(libs.gson)
 
-    // Android API stubs defined here.
-    compileOnly(project(":patches:stub"))
+    // Android API level 26 is the minimum API the patches are compiled for (see buildAndroid).
+    signature(libs.android.api.signature) { artifact { type = "signature" } }
+}
 
-    testImplementation(kotlin("test"))
-    testImplementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.protobuf.javalite)
-    testRuntimeOnly(libs.junit.jupiter.engine)
+animalsniffer {
+    // Checking only the compiled sources would miss bundled dependencies,
+    // so the whole patches file is checked by checkAndroidApi below.
+    sourceSets = emptyList()
 }
 
 tasks {
-    test {
-        useJUnitPlatform()
-        dependsOn(":extensions:youtube:generateReleaseProto", ":extensions:youtube:compileReleaseJavaWithJavac")
-        jamApk.orNull?.let { systemProperty("jamApk", it) }
-        // The Android-boundary tests load release bytecode in isolated class loaders.
-        // Declare those actual classes as inputs so runtime changes invalidate cached results.
-        inputs.dir(rootProject.file(
-            "extensions/youtube/build/intermediates/javac/release/compileReleaseJavaWithJavac/classes"
-        )).withPropertyName("queueRuntimeClasses").withNormalizer(ClasspathNormalizer::class)
-        inputs.file(rootProject.file(
-            "extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/OpenVideosFullscreenHookPatch.java"
-        )).withPropertyName("queueFullscreenBoundarySource")
-        inputs.files(
-            rootProject.file("extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/queue/QueueSaveActions.java"),
-            rootProject.file("extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/queue/QueueSaveFeedback.java"),
-            rootProject.file("extensions/youtube/src/main/proto/app/morphe/extension/youtube/innertube/playlist_queue.proto"),
-            rootProject.file("extensions/youtube/src/main/proto/app/morphe/extension/youtube/innertube/icon.proto")
-        ).withPropertyName("queueSaveBoundarySources")
-    }
-
-    register<JavaExec>("checkStringResources") {
-        description = "Checks resource strings for invalid formatting"
-
-        // Only the compiled patches and the raw string resources are needed. Using the full
-        // main runtime classpath would run processResources, which builds and minifies all extensions.
-        classpath = files(
-            sourceSets["main"].output.classesDirs,
-            configurations.runtimeClasspath,
-            layout.projectDirectory.dir("src/main/resources"),
-        )
-        mainClass.set("app.morphe.patches.util.resource.CheckStringResourcesKt")
-    }
-
     register<JavaExec>("generatePatchesList") {
         description = "Build patch with patch list"
 
         dependsOn(build)
 
         classpath = sourceSets["main"].runtimeClasspath + patchListGeneratorClasspath
-        mainClass.set("app.morphe.util.PatchListGeneratorKt")
+        mainClass.set("util.PatchListGeneratorKt")
     }
 
-    register<JavaExec>("validateJam") {
-        description = "Patches a supplied YouTube Music APK for Jam validation and optional device testing"
-        group = "verification"
+    // Runs D8 on every class in the patches file (the patches and all bundled dependencies)
+    // but outputs class files instead of dex, so the check sees the code as it runs on Android,
+    // after D8 has replaced methods it backports such as List.of() and Optional.isEmpty().
+    val desugarPatchesClasses = register("desugarPatchesClasses") {
+        val patchesFile = jar.flatMap { it.archiveFile }
+        val classpath = sourceSets["main"].compileClasspath
+        val output = layout.buildDirectory.file("animalsniffer/patches-desugared.jar")
 
-        dependsOn("testClasses")
-        classpath = sourceSets["test"].runtimeClasspath
-        mainClass.set("app.morphe.patches.music.interaction.jam.JamDeviceBuildKt")
+        inputs.file(patchesFile)
+        inputs.files(classpath)
+        outputs.file(output)
 
-        doFirst {
-            val apk = jamApk.orNull
-                ?: throw GradleException("validateJam requires -PjamApk=/absolute/path/to/ytm.apk")
-            setArgs(listOfNotNull(apk, jamOutput.orNull))
+        doLast {
+            val patchesPath = patchesFile.get().asFile.toPath()
+            val outputPath = output.get().asFile.toPath()
+
+            D8.run(
+                D8Command.builder()
+                    .addProgramResourceProvider(ArchiveResourceProvider.fromArchive(patchesPath, true))
+                    .addClasspathFiles(classpath.files.filter { it.exists() }.map { it.toPath() })
+                    .setMode(CompilationMode.DEBUG)
+                    .setMinApiLevel(26)
+                    .setOutput(outputPath, OutputMode.ClassFile)
+                    .build()
+            )
         }
     }
 
-    register<JavaExec>("validatePlaylistQueue") {
-        description = "Applies Native playlist queue to a stock APK and verifies it with Android SDK tools"
-        group = "verification"
-        dependsOn("testClasses")
-        classpath = sourceSets["test"].runtimeClasspath
-        mainClass.set("app.morphe.patches.youtube.interaction.nativeplaylistqueue.PlaylistQueueApkBuildKt")
-        doFirst {
-            val apk = providers.gradleProperty("playlistQueueApk").orNull
-                ?: throw GradleException("validatePlaylistQueue requires -PplaylistQueueApk=/absolute/path/youtube.apk")
-            val mode = providers.gradleProperty("playlistQueueMode").getOrElse("standalone")
-            val output = providers.gradleProperty("playlistQueueOutput").orNull
-            setArgs(listOfNotNull(apk, mode, output))
+    val extractPatchesClasses = register<Sync>("extractPatchesClasses") {
+        from(desugarPatchesClasses.map { zipTree(it.outputs.files.singleFile) }) {
+            include("**/*.class")
         }
+        into(layout.buildDirectory.dir("animalsniffer/patches-classes"))
     }
+
+    val checkAndroidApi = register<AnimalSniffer>("checkAndroidApi") {
+        description = "Checks that the patches file only uses APIs available on Android."
+        group = "verification"
+
+        source(extractPatchesClasses)
+        classpath = sourceSets["main"].compileClasspath
+        animalsnifferSignatures = configurations["signature"]
+        animalsnifferClasspath = configurations["animalsniffer"]
+        // Only used to show source lines in the report.
+        sourcesDirs = sourceSets["main"].allSource.sourceDirectories
+        reports.text.outputLocation = layout.buildDirectory.file("reports/animalsniffer/patches.text")
+        reports.csv.outputLocation = layout.buildDirectory.file("reports/animalsniffer/patches.csv")
+    }
+
+    check {
+        dependsOn(checkAndroidApi)
+    }
+
+    // buildAndroid does not depend on check.
+    named("buildAndroid") {
+        dependsOn(checkAndroidApi)
+    }
+
     // Used by gradle-semantic-release-plugin.
     publish {
         dependsOn("generatePatchesList")
