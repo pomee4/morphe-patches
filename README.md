@@ -15,6 +15,11 @@ Then patch the app with both Morphe Patches and pomee4 Patches selected.
 ## Patches
 
 <!-- PATCHES_START EXPANDED -->
+> **[v3.0.0](https://github.com/pomee4/morphe-patches/releases/tag/v3.0.0)**&nbsp;&nbsp;&middot;&nbsp;&nbsp;`main`&nbsp;&nbsp;&middot;&nbsp;&nbsp;**1 patches** across **1 apps**&nbsp;&nbsp;&middot;&nbsp;&nbsp;[Full details](PATCHES.md)
+
+| # | App | Patches | Version | Package |
+|---|---|---|---|---|
+| 1 | [**Reddit**](PATCHES.md#reddit-comredditfrontpage) | 1 | `experimental 2026.46.0`, `experimental 2026.45.0`, `experimental 2026.44.0`, `2026.40.0` | [`com.reddit.frontpage`](https://play.google.com/store/apps/details?id=com.reddit.frontpage) |
 <!-- PATCHES_END -->
 
 ### Reddit: Comment swipe actions
