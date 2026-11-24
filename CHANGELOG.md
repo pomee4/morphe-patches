@@ -1,3 +1,9 @@
+## [3.1.0](https://github.com/pomee4/morphe-patches/compare/v3.0.0...v3.1.0) (2026-11-24)
+
+### ✨ New Features
+
+* **MySpoti:** Add `Keep the playlist in car playback` patch ([d9bb088](https://github.com/pomee4/morphe-patches/commit/d9bb088fdb5bfc71327fb99e0e02d0b79fe7947e))
+
 ## [3.0.0](https://github.com/pomee4/morphe-patches/compare/v2.1.0...v3.0.0) (2026-11-24)
 
 ### ⚠ BREAKING CHANGES

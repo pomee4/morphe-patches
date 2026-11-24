@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "patches": [
     {
       "name": "Comment swipe actions",
@@ -45,6 +45,40 @@
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": 29,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Keep the playlist in car playback",
+      "description": "A playlist or album started from Waze, Android Auto or another media browser keeps playing that list when an audio-source extension plays it, instead of playing only the picked song and going on with its song radio.",
+      "default": true,
+      "category": null,
+      "compatiblePackages": [
+        {
+          "packageName": "app.myspoti.dev",
+          "name": "MySpoti",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1DB954",
+          "signatures": null,
+          "formFactor": "MOBILE",
+          "targets": [
+            {
+              "version": "2.3.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
               "description": null
             }
           ]
