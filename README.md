@@ -14,6 +14,9 @@ Then patch the app with both Morphe Patches and pomee4 Patches selected.
 
 ## Patches
 
+<!-- PATCHES_START EXPANDED -->
+<!-- PATCHES_END -->
+
 ### Reddit: Comment swipe actions
 
 Swipe a comment sideways to upvote, downvote, reply, save, share, collapse the thread, open the overflow
