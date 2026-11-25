@@ -615,7 +615,10 @@ public final class CommentSwipeActionsPatch {
                     View decor = activity.getWindow().getDecorView();
                     boolean atEdge = downX < edgeExclusion || downX > decor.getWidth() - edgeExclusion;
                     boolean enabled = isEnabled() || Settings.POST_SWIPE_ACTIONS.get();
-                    state = !enabled || atEdge ? IGNORED : IDLE;
+                    // Nothing behind an open side menu, sheet, menu, modal or dialog is swiped.
+                    boolean covered = enabled && !atEdge && (!activity.hasWindowFocus()
+                            || PostSwipe.isOverlayOpen() || PostSwipe.isDrawerOpen(activity));
+                    state = !enabled || atEdge || covered ? IGNORED : IDLE;
                     return false;
                 }
                 case MotionEvent.ACTION_POINTER_DOWN:

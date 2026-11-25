@@ -606,7 +606,7 @@ public final class PostSwipe {
 
         @Override
         public Object invoke(Object coordinates) {
-            if (coordinates != null) bars.put(coordinates, tag);
+            if (coordinates != null) (isBarTag(tag) ? bars : overlays).put(coordinates, tag);
             return unit();
         }
     }
@@ -614,6 +614,76 @@ public final class PostSwipe {
     private static boolean isBarTag(String tag) {
         for (String bar : BAR_TAGS) {
             if (tag.contains(bar)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Test tags of what opens over a screen: bottom sheets (menus, share), modals and dialogs, scrims, popups,
+     * dropdowns, tooltips and snackbars. What opens in its own window takes the window focus, which
+     * {@link CommentSwipeActionsPatch} also checks.
+     */
+    private static final String[] OVERLAY_TAGS = {
+            "sheet", "modal", "dialog", "scrim", "popup", "dropdown", "tooltip", "snackbar"
+    };
+
+    /**
+     * The layout coordinates of the open sheets, modals and dialogs.
+     */
+    private static final Map<Object, String> overlays = Collections.synchronizedMap(new WeakHashMap<>());
+
+    private static boolean isOverlayTag(String tag) {
+        for (String overlay : OVERLAY_TAGS) {
+            if (tag.contains(overlay)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * @return If a sheet, a modal or a dialog is open over the screen.
+     */
+    static boolean isOverlayOpen() {
+        try {
+            List<Object> coordinates;
+            synchronized (overlays) {
+                coordinates = new ArrayList<>(overlays.keySet());
+            }
+            for (Object overlay : coordinates) {
+                if (coordinatesRect(overlay) != null) return true;
+            }
+        } catch (Throwable ex) {
+            Logger.printException(() -> "isOverlayOpen failure", ex);
+        }
+        return false;
+    }
+
+    private static volatile int drawerLayoutId = -1;
+
+    /**
+     * @return If the side menu (a drawer of the drawer layout) is open.
+     */
+    static boolean isDrawerOpen(Activity activity) {
+        try {
+            int id = drawerLayoutId;
+            if (id < 0) {
+                id = activity.getResources().getIdentifier("drawer_layout", "id", activity.getPackageName());
+                drawerLayoutId = id;
+            }
+            if (id == 0) return false;
+            android.view.View view = activity.findViewById(id);
+            if (!(view instanceof android.view.ViewGroup)) return false;
+            android.view.ViewGroup layout = (android.view.ViewGroup) view;
+            Rect visible = new Rect();
+            // The first child is the content, the others are the drawers, which are not visible when closed.
+            for (int i = 1; i < layout.getChildCount(); i++) {
+                android.view.View drawer = layout.getChildAt(i);
+                if (drawer.getVisibility() == android.view.View.VISIBLE
+                        && drawer.getGlobalVisibleRect(visible) && visible.width() > 0) {
+                    return true;
+                }
+            }
+        } catch (Throwable ex) {
+            Logger.printException(() -> "isDrawerOpen failure", ex);
         }
         return false;
     }
@@ -627,7 +697,7 @@ public final class PostSwipe {
      */
     public static Object onTestTag(Object modifier, String tag) {
         try {
-            if (tag == null || !isBarTag(tag)) return modifier;
+            if (tag == null || !(isBarTag(tag) || isOverlayTag(tag))) return modifier;
             BarCallback callback = barCallbacks.get(tag);
             if (callback == null) {
                 callback = new BarCallback(tag);
