@@ -1,7 +1,6 @@
 package app.pomee4.extension.commentswipe;
 
 import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeAction;
-import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeDirection;
 
 /**
  * Texts of the swipe actions and the settings screen (English).
@@ -22,6 +21,8 @@ final class Labels {
                 return "Save";
             case SHARE:
                 return "Share";
+            case TOGGLE_COLLAPSE:
+                return "Collapse";
             case COLLAPSE:
                 return "Collapse thread";
             case OVERFLOW:
@@ -31,9 +32,5 @@ final class Labels {
             default:
                 return "None";
         }
-    }
-
-    static String direction(SwipeDirection direction) {
-        return direction == SwipeDirection.LEFT_TO_RIGHT ? "Left to right" : "Right to left";
     }
 }

@@ -7,6 +7,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
+import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 import android.preference.SwitchPreference;
@@ -14,7 +15,6 @@ import android.preference.SwitchPreference;
 import java.util.Collections;
 
 import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeAction;
-import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeDirection;
 
 /**
  * Settings screen of the comment swipe actions. Added to the manifest during patching and opened
@@ -69,20 +69,48 @@ public final class SettingsActivity extends Activity {
             enabled.setKey(Settings.COMMENT_SWIPE_ACTIONS.key);
             enabled.setDefaultValue(Settings.COMMENT_SWIPE_ACTIONS.defaultValue);
             enabled.setTitle("Comment swipe actions");
-            enabled.setSummary("Swipe a comment sideways to vote, save, reply and more. How far you swipe picks the action");
+            enabled.setSummary("Swipe a comment left or right to vote, save, reply and more. How far you swipe picks the first or second action");
             screen.addPreference(enabled);
 
-            Preference[] dependents = {
-                    actionPreference(context, Settings.COMMENT_SWIPE_FIRST, "First swipe action"),
-                    actionPreference(context, Settings.COMMENT_SWIPE_SECOND, "Second swipe action"),
-                    actionPreference(context, Settings.COMMENT_SWIPE_THIRD, "Third swipe action"),
-                    directionPreference(context),
-                    vibratePreference(context),
-            };
-            for (Preference preference : dependents) {
-                screen.addPreference(preference);
-                preference.setDependency(enabled.getKey());
-            }
+            addDirection(context, screen, enabled, "Swipe left", Settings.LEFT_FIRST, Settings.LEFT_SECOND);
+            addDirection(context, screen, enabled, "Swipe right", Settings.RIGHT_FIRST, Settings.RIGHT_SECOND);
+
+            PreferenceCategory other = new PreferenceCategory(context);
+            other.setTitle("Feedback");
+            screen.addPreference(other);
+            Preference vibrate = vibratePreference(context);
+            other.addPreference(vibrate);
+            vibrate.setDependency(enabled.getKey());
+        }
+
+        private static void addDirection(Context context, PreferenceScreen screen, Preference enabled, String title,
+                                         Settings.EnumSetting<SwipeAction> first,
+                                         Settings.EnumSetting<SwipeAction> second) {
+            PreferenceCategory category = new PreferenceCategory(context);
+            category.setTitle(title);
+            screen.addPreference(category);
+
+            ListPreference firstPreference = actionPreference(context, first, "First action");
+            category.addPreference(firstPreference);
+            firstPreference.setDependency(enabled.getKey());
+
+            ListPreference secondPreference = actionPreference(context, second, "Second action");
+            category.addPreference(secondPreference);
+            secondPreference.setDependency(enabled.getKey());
+            updateSecondSummary(secondPreference, second.get());
+            secondPreference.setOnPreferenceChangeListener((preference, value) -> {
+                updateSecondSummary((ListPreference) preference, SwipeAction.valueOf((String) value));
+                return true;
+            });
+        }
+
+        /**
+         * Explains what a longer swipe does when the second action is None.
+         */
+        private static void updateSecondSummary(ListPreference preference, SwipeAction action) {
+            preference.setSummary(action == SwipeAction.NONE
+                    ? "None: any swipe distance does the first action. Set both to None to turn off this direction"
+                    : Labels.action(action) + ", on a longer swipe");
         }
 
         private static ListPreference actionPreference(Context context,
@@ -95,18 +123,6 @@ public final class SettingsActivity extends Activity {
                 entryValues[i] = values[i].name();
             }
             return listPreference(context, setting.key, setting.defaultValue.name(), title, entries, entryValues);
-        }
-
-        private static ListPreference directionPreference(Context context) {
-            SwipeDirection[] values = SwipeDirection.values();
-            String[] entries = new String[values.length];
-            String[] entryValues = new String[values.length];
-            for (int i = 0; i < values.length; i++) {
-                entries[i] = Labels.direction(values[i]);
-                entryValues[i] = values[i].name();
-            }
-            return listPreference(context, Settings.COMMENT_SWIPE_DIRECTION.key,
-                    Settings.COMMENT_SWIPE_DIRECTION.defaultValue.name(), "Swipe direction", entries, entryValues);
         }
 
         private static ListPreference listPreference(Context context, String key, String defaultValue, String title,

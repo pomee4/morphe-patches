@@ -40,8 +40,8 @@ import java.util.WeakHashMap;
 
 
 /**
- * Sync for Reddit style swipe actions on comments: swiping a comment sideways slides it and reveals
- * up to three actions, picked by how far it is swiped.
+ * Sync for Reddit style swipe actions on comments: swiping a comment left or right slides it and
+ * reveals the first or second action of that direction, picked by how far it is swiped.
  * <p>
  * Reddit draws comments with an obfuscated copy of Jetpack Compose, so the swipe itself is done
  * with plain Android views: the window's touch events are watched, and once a sideways drag starts
@@ -60,18 +60,17 @@ public final class CommentSwipeActionsPatch {
         SHARE,
         COLLAPSE,
         OVERFLOW,
-        PROFILE
-    }
-
-    public enum SwipeDirection {
-        RIGHT_TO_LEFT,
-        LEFT_TO_RIGHT
+        PROFILE,
+        /**
+         * Collapses the comment and its replies, or expands it if it is collapsed, like a tap on it.
+         */
+        TOGGLE_COLLAPSE
     }
 
     /**
-     * Swipe distance, as a fraction of the comment width, where each stage starts.
+     * Swipe distance, as a fraction of the comment width, where the first and second action start.
      */
-    private static final float[] STAGE_STARTS = {0.18f, 0.40f, 0.62f};
+    private static final float[] STAGE_STARTS = {0.18f, 0.45f};
     private static final float MAX_SWIPE_FRACTION = 0.85f;
     private static final int EDGE_EXCLUSION_DP = 24;
     private static final long RELEASE_ANIMATION_MILLIS = 180;
@@ -181,6 +180,10 @@ public final class CommentSwipeActionsPatch {
     }
 
     private static Object createOverflowEvent(String commentId, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
+    private static Object createToggleCollapseEvent(String commentId, Object scratch) {
         return null;  // Modified during patching.
     }
 
@@ -432,17 +435,18 @@ public final class CommentSwipeActionsPatch {
 
     // region Actions
 
-    private static SwipeAction actionForStage(int stage) {
-        switch (stage) {
-            case 1:
-                return Settings.COMMENT_SWIPE_FIRST.get();
-            case 2:
-                return Settings.COMMENT_SWIPE_SECOND.get();
-            case 3:
-                return Settings.COMMENT_SWIPE_THIRD.get();
-            default:
-                return SwipeAction.NONE;
-        }
+    /**
+     * @param leftSwipe If the comment is swiped from right to left.
+     * @return The actions of the direction that are not None: none, one or two. One action is done at
+     * any swipe distance, so a long swipe never ends on nothing.
+     */
+    private static SwipeAction[] actionsFor(boolean leftSwipe) {
+        SwipeAction first = (leftSwipe ? Settings.LEFT_FIRST : Settings.RIGHT_FIRST).get();
+        SwipeAction second = (leftSwipe ? Settings.LEFT_SECOND : Settings.RIGHT_SECOND).get();
+        if (first == SwipeAction.NONE && second == SwipeAction.NONE) return new SwipeAction[0];
+        if (first == SwipeAction.NONE) return new SwipeAction[]{second};
+        if (second == SwipeAction.NONE) return new SwipeAction[]{first};
+        return new SwipeAction[]{first, second};
     }
 
     private static void perform(Activity activity, Row row, SwipeAction action) {
@@ -473,6 +477,9 @@ public final class CommentSwipeActionsPatch {
                     break;
                 case OVERFLOW:
                     event = createOverflowEvent(id, null);
+                    break;
+                case TOGGLE_COLLAPSE:
+                    event = createToggleCollapseEvent(id, null);
                     break;
                 case PROFILE:
                     openProfile(activity, id);
@@ -521,6 +528,7 @@ public final class CommentSwipeActionsPatch {
                 return 0xFF0079D3;
             case PROFILE:
                 return 0xFF9C6ADE;
+            case TOGGLE_COLLAPSE:
             case COLLAPSE:
             case OVERFLOW:
                 return 0xFF878A8C;
@@ -608,13 +616,14 @@ public final class CommentSwipeActionsPatch {
                     }
                     if (Math.abs(dx) < touchSlop * 1.5f || Math.abs(dx) < Math.abs(dy) * 2) return false;
 
-                    boolean rightToLeft = Settings.COMMENT_SWIPE_DIRECTION.get() == SwipeDirection.RIGHT_TO_LEFT;
+                    boolean rightToLeft = dx < 0;
+                    SwipeAction[] actions = actionsFor(rightToLeft);
                     Press current = lastPress;
-                    if ((rightToLeft ? dx > 0 : dx < 0) || current == null || current.time < downTime) {
+                    if (actions.length == 0 || current == null || current.time < downTime) {
                         state = IGNORED;
                         return false;
                     }
-                    startSwipe(event, current, rightToLeft);
+                    startSwipe(event, current, rightToLeft, actions);
                     if (overlay != null) overlay.update(dx);
                     return true;
                 }
@@ -633,7 +642,7 @@ public final class CommentSwipeActionsPatch {
             }
         }
 
-        private void startSwipe(MotionEvent event, Press current, boolean rightToLeft) {
+        private void startSwipe(MotionEvent event, Press current, boolean rightToLeft, SwipeAction[] actions) {
             state = SWIPING;
             press = current;
 
@@ -646,7 +655,7 @@ public final class CommentSwipeActionsPatch {
             int left = Math.round(downX - current.x);
             int top = Math.round(downY - current.y);
             Rect bounds = new Rect(left, top, left + current.width, top + current.height);
-            overlay = new SwipeOverlay(activity, bounds, rightToLeft);
+            overlay = new SwipeOverlay(activity, bounds, rightToLeft, actions);
         }
 
         private void finishSwipe(boolean perform) {
@@ -657,11 +666,10 @@ public final class CommentSwipeActionsPatch {
             state = IGNORED;
             if (finished == null) return;
 
-            int stage = finished.stage;
+            SwipeAction action = finished.action();
             finished.release(() -> {
-                if (perform && finishedPress != null) {
-                    SwipeAction action = actionForStage(stage);
-                    if (action != SwipeAction.NONE) perform(activity, finishedPress.row, action);
+                if (perform && finishedPress != null && action != SwipeAction.NONE) {
+                    perform(activity, finishedPress.row, action);
                 }
             });
         }
@@ -680,15 +688,20 @@ public final class CommentSwipeActionsPatch {
     private static final class SwipeOverlay {
         private final Activity activity;
         private final boolean rightToLeft;
+        /**
+         * The actions of the swipe direction, one per stage: one or two.
+         */
+        private final SwipeAction[] actions;
         private final int width;
         private final FrameLayout container;
         private final ImageView copy;
         private final TextView label;
         int stage;
 
-        SwipeOverlay(Activity activity, Rect bounds, boolean rightToLeft) {
+        SwipeOverlay(Activity activity, Rect bounds, boolean rightToLeft, SwipeAction[] actions) {
             this.activity = activity;
             this.rightToLeft = rightToLeft;
+            this.actions = actions;
             this.width = bounds.width();
 
             container = new FrameLayout(activity);
@@ -735,7 +748,7 @@ public final class CommentSwipeActionsPatch {
             copy.setTranslationX(rightToLeft ? -distance : distance);
 
             int newStage = 0;
-            for (int i = 0; i < STAGE_STARTS.length; i++) {
+            for (int i = 0; i < actions.length; i++) {
                 if (distance >= width * STAGE_STARTS[i]) newStage = i + 1;
             }
             if (newStage != stage) {
@@ -747,10 +760,17 @@ public final class CommentSwipeActionsPatch {
             }
         }
 
+        /**
+         * @return The action of the current stage, or None before the first stage.
+         */
+        SwipeAction action() {
+            return stage > 0 ? actions[stage - 1] : SwipeAction.NONE;
+        }
+
         private void setStage(int newStage) {
             stage = newStage;
-            SwipeAction action = actionForStage(newStage);
-            boolean active = newStage > 0 && action != SwipeAction.NONE;
+            SwipeAction action = action();
+            boolean active = action != SwipeAction.NONE;
             container.setBackgroundColor(active ? actionColor(action) : actionColor(SwipeAction.NONE));
             label.setText(active ? actionLabel(action) : "");
         }

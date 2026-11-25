@@ -89,6 +89,11 @@ internal val ShareEventFingerprint = CommentEventFingerprint("OnClickShareEvent(
 internal val CollapseThreadEventFingerprint = CommentEventFingerprint("OnClickCollapseThreadEvent(")
 internal val OverflowMenuEventFingerprint = CommentEventFingerprint("OnClickOverflowMenuEvent(")
 
+/**
+ * The event of a tap on a comment, which collapses the comment and its replies, or expands it if collapsed.
+ */
+internal val ClickCommentEventFingerprint = CommentEventFingerprint("OnClickCommentEvent(")
+
 internal const val USER_SETTINGS_SECTION_CLASS =
     "Lcom/reddit/settings/usersettings/UserSettingsSection;"
 

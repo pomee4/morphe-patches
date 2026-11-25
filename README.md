@@ -25,8 +25,14 @@ Then patch the app with both Morphe Patches and pomee4 Patches selected.
 
 ### Reddit: Comment swipe actions
 
-Swipe a comment sideways to upvote, downvote, reply, save, share, collapse the thread, open the overflow
-menu or open the author's profile. How far you swipe picks one of up to three actions.
+Swipe a comment left or right to upvote, downvote, reply, save, share, collapse it, collapse the thread,
+open the overflow menu or open the author's profile. Each direction has a first and a second action: a
+short swipe does the first, a longer swipe the second.
+
+- If the second action is **None**, any swipe distance does the first action.
+- If both actions of a direction are **None**, comments do not swipe that way.
+- **Collapse** works like a tap on the comment: it collapses the comment and its replies, and swiping a
+  collapsed comment expands it again. It also works on top-level comments.
 
 **Settings:** in Reddit, open **Settings** and tap **Comment swipe** in the **General** section, under
 **Morphe**. There you can turn the swipe actions on or off, pick the first, second and third action, the

@@ -48,8 +48,9 @@ private val settingsActivityPatch = resourcePatch {
 @Suppress("unused")
 val commentSwipeActionsPatch = bytecodePatch(
     name = "Comment swipe actions",
-    description = "Adds swipe actions to comments: swipe a comment sideways to upvote, downvote, reply, save, " +
-        "share, collapse or open the author's profile, picked by how far it is swiped. " +
+    description = "Adds swipe actions to comments: swipe a comment left or right to upvote, downvote, " +
+        "reply, save, share, collapse or open the author's profile. Each direction has a first and a " +
+        "second action, picked by how far it is swiped. " +
         "Settings: Reddit settings, General, Comment swipe."
 ) {
     compatibleWith(COMPATIBILITY_REDDIT)
@@ -119,6 +120,7 @@ val commentSwipeActionsPatch = bytecodePatch(
             "createUnsaveEvent" to UnsaveEventFingerprint,
             "createCollapseEvent" to CollapseThreadEventFingerprint,
             "createOverflowEvent" to OverflowMenuEventFingerprint,
+            "createToggleCollapseEvent" to ClickCommentEventFingerprint,
         ).forEach { (factory, fingerprint) ->
             fillEventFactory(factory, fingerprint, listOf("Ljava/lang/String;")) { event, constructor ->
                 """

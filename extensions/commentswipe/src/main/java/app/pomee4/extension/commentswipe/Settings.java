@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeAction;
-import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeDirection;
 
 /**
  * Comment swipe settings, kept in their own preferences file so they do not depend on
@@ -14,15 +13,27 @@ public final class Settings {
     static final String PREFERENCES_NAME = "pomee4_comment_swipe";
 
     public static final BooleanSetting COMMENT_SWIPE_ACTIONS = new BooleanSetting("comment_swipe_actions", true);
-    public static final EnumSetting<SwipeAction> COMMENT_SWIPE_FIRST =
-            new EnumSetting<>("comment_swipe_first", SwipeAction.UPVOTE);
-    public static final EnumSetting<SwipeAction> COMMENT_SWIPE_SECOND =
-            new EnumSetting<>("comment_swipe_second", SwipeAction.SAVE);
-    public static final EnumSetting<SwipeAction> COMMENT_SWIPE_THIRD =
-            new EnumSetting<>("comment_swipe_third", SwipeAction.REPLY);
+    /**
+     * Swipe left: the comment is dragged from right to left.
+     */
+    public static final EnumSetting<SwipeAction> LEFT_FIRST =
+            new EnumSetting<>("comment_swipe_left_first", SwipeAction.UPVOTE);
+    public static final EnumSetting<SwipeAction> LEFT_SECOND =
+            new EnumSetting<>("comment_swipe_left_second", SwipeAction.DOWNVOTE);
+    /**
+     * Swipe right: the comment is dragged from left to right.
+     */
+    public static final EnumSetting<SwipeAction> RIGHT_FIRST =
+            new EnumSetting<>("comment_swipe_right_first", SwipeAction.TOGGLE_COLLAPSE);
+    public static final EnumSetting<SwipeAction> RIGHT_SECOND =
+            new EnumSetting<>("comment_swipe_right_second", SwipeAction.REPLY);
     public static final BooleanSetting COMMENT_SWIPE_VIBRATE = new BooleanSetting("comment_swipe_vibrate", true);
-    public static final EnumSetting<SwipeDirection> COMMENT_SWIPE_DIRECTION =
-            new EnumSetting<>("comment_swipe_direction", SwipeDirection.RIGHT_TO_LEFT);
+
+    // Settings of versions with one swipe direction and three actions, moved by migrate().
+    private static final String OLD_FIRST = "comment_swipe_first";
+    private static final String OLD_SECOND = "comment_swipe_second";
+    private static final String OLD_THIRD = "comment_swipe_third";
+    private static final String OLD_DIRECTION = "comment_swipe_direction";
 
     private static volatile SharedPreferences preferences;
 
@@ -30,7 +41,31 @@ public final class Settings {
     }
 
     static void init(Context context) {
-        if (preferences == null) preferences = preferences(context);
+        if (preferences == null) {
+            SharedPreferences prefs = preferences(context);
+            migrate(prefs);
+            preferences = prefs;
+        }
+    }
+
+    /**
+     * Moves the first and second action of the old single swipe direction to that direction.
+     * The old third action has no place anymore.
+     */
+    static void migrate(SharedPreferences prefs) {
+        if (!prefs.contains(OLD_FIRST) && !prefs.contains(OLD_SECOND)
+                && !prefs.contains(OLD_THIRD) && !prefs.contains(OLD_DIRECTION)) {
+            return;
+        }
+        boolean leftToRight = "LEFT_TO_RIGHT".equals(prefs.getString(OLD_DIRECTION, null));
+        SharedPreferences.Editor editor = prefs.edit();
+        if (prefs.contains(OLD_FIRST)) {
+            editor.putString((leftToRight ? RIGHT_FIRST : LEFT_FIRST).key, prefs.getString(OLD_FIRST, null));
+        }
+        if (prefs.contains(OLD_SECOND)) {
+            editor.putString((leftToRight ? RIGHT_SECOND : LEFT_SECOND).key, prefs.getString(OLD_SECOND, null));
+        }
+        editor.remove(OLD_FIRST).remove(OLD_SECOND).remove(OLD_THIRD).remove(OLD_DIRECTION).apply();
     }
 
     static SharedPreferences preferences(Context context) {
