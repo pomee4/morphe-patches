@@ -5,6 +5,17 @@ import android.content.Context;
 import android.content.pm.ShortcutManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.graphics.drawable.Drawable;
+import android.util.TypedValue;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.view.Window;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toolbar;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
@@ -40,22 +51,127 @@ public final class SettingsActivity extends Activity {
         }
     }
 
+    private static final String TITLE = "Comment swipe";
+
+    /**
+     * If the screen uses the settings style of the Morphe Patches, like the Morphe settings.
+     */
+    private static boolean morpheStyle;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        setTheme(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-                ? android.R.style.Theme_DeviceDefault_DayNight
-                : android.R.style.Theme_DeviceDefault_Settings);
+        // The colors come from the Reddit theme, so from the Reddit screen this one was opened from.
+        Activity reddit = CommentSwipeActionsPatch.currentActivity();
+        morpheStyle = MorpheStyle.load(reddit == null || reddit instanceof SettingsActivity ? this : reddit);
+
+        if (morpheStyle) {
+            setTheme(MorpheStyle.isDark()
+                    ? android.R.style.Theme_DeviceDefault_NoActionBar
+                    : android.R.style.Theme_DeviceDefault_Light_NoActionBar);
+        } else {
+            setTheme(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                    ? android.R.style.Theme_DeviceDefault_DayNight
+                    : android.R.style.Theme_DeviceDefault_Settings);
+        }
         super.onCreate(savedInstanceState);
-        setTitle("Comment swipe actions");
+        setTitle(TITLE);
         Settings.init(this);
+
+        int containerId = android.R.id.content;
+        if (morpheStyle) containerId = setUpMorpheLayout();
+
         if (savedInstanceState == null) {
             getFragmentManager().beginTransaction()
-                    .replace(android.R.id.content, new SettingsFragment())
+                    .replace(containerId, new SettingsFragment())
                     .commit();
         }
     }
 
+    /**
+     * A toolbar with a back arrow and the title above the settings, like the Morphe settings.
+     *
+     * @return The id of the view that holds the settings.
+     */
+    private int setUpMorpheLayout() {
+        int background = MorpheStyle.backgroundColor();
+        boolean dark = MorpheStyle.isDark();
+
+        Window window = getWindow();
+        window.setStatusBarColor(background);
+        window.setNavigationBarColor(background);
+        window.getDecorView().setSystemUiVisibility(dark
+                ? 0
+                : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setBackgroundColor(background);
+        layout.setFitsSystemWindows(true);
+
+        int actionBarSize;
+        TypedValue value = new TypedValue();
+        if (getTheme().resolveAttribute(android.R.attr.actionBarSize, value, true)) {
+            actionBarSize = TypedValue.complexToDimensionPixelSize(value.data, getResources().getDisplayMetrics());
+        } else {
+            actionBarSize = Math.round(56 * getResources().getDisplayMetrics().density);
+        }
+
+        Toolbar toolbar = new Toolbar(this);
+        toolbar.setBackgroundColor(background);
+        toolbar.setTitle(TITLE);
+        toolbar.setTitleTextColor(MorpheStyle.titleColor());
+        toolbar.setElevation(getResources().getDisplayMetrics().density * (dark ? 1 : 6));
+        toolbar.post(() -> {
+            for (int i = 0; i < toolbar.getChildCount(); i++) {
+                View child = toolbar.getChildAt(i);
+                if (child instanceof TextView title) {
+                    MorpheStyle.styleToolbarTitle(title);
+                    break;
+                }
+            }
+        });
+
+        int backIconId = getResources().getIdentifier("icon_arrow_back", "drawable", getPackageName());
+        Drawable backIcon = backIconId != 0 ? getDrawable(backIconId) : null;
+        if (backIcon != null) {
+            backIcon.setTint(MorpheStyle.textColor());
+            toolbar.setNavigationIcon(backIcon);
+        }
+        toolbar.setNavigationContentDescription("Back");
+        toolbar.setNavigationOnClickListener(v -> finish());
+        layout.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, actionBarSize));
+
+        FrameLayout container = new FrameLayout(this);
+        container.setId(View.generateViewId());
+        layout.addView(container, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        setContentView(layout);
+        return container.getId();
+    }
+
     public static final class SettingsFragment extends PreferenceFragment {
+        private ViewTreeObserver.OnPreDrawListener styleListener;
+
+        @Override
+        public void onViewCreated(View view, Bundle savedInstanceState) {
+            super.onViewCreated(view, savedInstanceState);
+            if (!morpheStyle) return;
+            ListView list = view.findViewById(android.R.id.list);
+            if (list != null) styleListener = MorpheStyle.styleList(list);
+        }
+
+        @Override
+        public void onDestroyView() {
+            View view = getView();
+            if (styleListener != null && view != null) {
+                ListView list = view.findViewById(android.R.id.list);
+                if (list != null) list.getViewTreeObserver().removeOnPreDrawListener(styleListener);
+            }
+            styleListener = null;
+            super.onDestroyView();
+        }
+
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);

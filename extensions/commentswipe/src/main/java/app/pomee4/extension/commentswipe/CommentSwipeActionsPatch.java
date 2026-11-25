@@ -58,13 +58,13 @@ public final class CommentSwipeActionsPatch {
         REPLY,
         SAVE,
         SHARE,
-        COLLAPSE,
-        OVERFLOW,
-        PROFILE,
         /**
          * Collapses the comment and its replies, or expands it if it is collapsed, like a tap on it.
          */
-        TOGGLE_COLLAPSE
+        TOGGLE_COLLAPSE,
+        COLLAPSE,
+        OVERFLOW,
+        PROFILE
     }
 
     /**
