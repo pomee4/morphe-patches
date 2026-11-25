@@ -647,9 +647,15 @@ public final class CommentSwipeActionsPatch {
                         }
                         int left = Math.round(downX - current.x);
                         int top = Math.round(downY - current.y);
+                        // The part of the comment under a bar of the screen is not swiped.
+                        Rect visible = PostSwipe.withoutBars(
+                                new Rect(left, top, left + current.width, top + current.height));
+                        if (visible == null) {
+                            state = IGNORED;
+                            return false;
+                        }
                         press = current;
-                        startSwipe(event, new Rect(left, top, left + current.width, top + current.height),
-                                commentActions(true), commentActions(false));
+                        startSwipe(event, visible, commentActions(true), commentActions(false));
                     } else {
                         // A post: the card under the finger.
                         PostSwipe.Target target = Settings.POST_SWIPE_ACTIONS.get()

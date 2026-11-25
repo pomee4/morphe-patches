@@ -271,6 +271,7 @@ internal val postSwipePatch = bytecodePatch {
             """
         )
         ownSwipeAreas(ownSwipeSections, positionModifier, sectionComposable)
+        barHook(positionModifier)
 
         val sinkField = context.fields.firstOrNull { it.type == "Lkotlin/jvm/functions/Function1;" }
             ?: throw PatchException("No event sink in $contextType")

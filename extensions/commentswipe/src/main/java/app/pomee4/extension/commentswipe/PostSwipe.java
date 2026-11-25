@@ -474,9 +474,12 @@ public final class PostSwipe {
                 if (stale) continue;
                 onScreen.add(rect);
                 if (!rect.contains((int) x, (int) y)) continue;
+                // The part under a bar of the screen is not swiped, and a swipe on the bar is the bar's.
+                Rect visible = withoutBars(rect);
+                if (visible == null || !visible.contains((int) x, (int) y)) return null;
                 // A swipe that starts on a gallery or a carousel is left to it.
                 if (card.kind == KIND_FEED && inOwnSwipeArea(section, x, y)) return null;
-                return new Target(card, section, context, rect);
+                return new Target(card, section, context, visible);
             }
         } catch (Throwable ex) {
             Logger.printException(() -> "findTarget failure", ex);
@@ -575,6 +578,97 @@ public final class PostSwipe {
      *
      * @return The modifier with a callback that keeps the part's layout coordinates.
      */
+    /**
+     * Test tags of the bars that are drawn over lists: app bars, toolbars, tab bars, the bottom navigation and
+     * the bars of feeds (feed options, sort bars, sticky headers).
+     */
+    private static final String[] BAR_TAGS = {
+            "app_bar", "top_bar", "toolbar", "tab_bar", "bottom_nav", "feed_options", "feed_controls",
+            "sort_bar", "sticky_header"
+    };
+
+    /**
+     * The layout coordinates of the bars, by the bar's test tag.
+     */
+    private static final Map<Object, String> bars = Collections.synchronizedMap(new WeakHashMap<>());
+
+    /**
+     * One position callback per bar tag, so a bar keeps its callback when it is composed again.
+     */
+    private static final Map<String, BarCallback> barCallbacks = Collections.synchronizedMap(new LinkedHashMap<>());
+
+    private static final class BarCallback implements kotlin.jvm.functions.Function1<Object, Object> {
+        final String tag;
+
+        BarCallback(String tag) {
+            this.tag = tag;
+        }
+
+        @Override
+        public Object invoke(Object coordinates) {
+            if (coordinates != null) bars.put(coordinates, tag);
+            return unit();
+        }
+    }
+
+    private static boolean isBarTag(String tag) {
+        for (String bar : BAR_TAGS) {
+            if (tag.contains(bar)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Injection point.
+     * <p>
+     * Called by Modifier.testTag(tag), before the tag is added to the modifier.
+     *
+     * @return The modifier, with a callback that keeps the layout coordinates if the tag is a bar.
+     */
+    public static Object onTestTag(Object modifier, String tag) {
+        try {
+            if (tag == null || !isBarTag(tag)) return modifier;
+            BarCallback callback = barCallbacks.get(tag);
+            if (callback == null) {
+                callback = new BarCallback(tag);
+                barCallbacks.put(tag, callback);
+            }
+            return withPositionCallback(modifier, callback);
+        } catch (Throwable ex) {
+            Logger.printException(() -> "onTestTag failure", ex);
+            return modifier;
+        }
+    }
+
+    /**
+     * @return The part of a rect that no bar of the screen is drawn over, or null if there is none. A bar
+     * over the top of the rect moves its top down, a bar over its bottom moves its bottom up.
+     */
+    static Rect withoutBars(Rect rect) {
+        Rect visible = new Rect(rect);
+        try {
+            List<Object> coordinates;
+            synchronized (bars) {
+                coordinates = new ArrayList<>(bars.keySet());
+            }
+            for (Object barCoordinates : coordinates) {
+                Rect bar = coordinatesRect(barCoordinates);
+                if (bar == null || !Rect.intersects(bar, visible)) continue;
+                // A bar that holds the whole rect is a screen, not a bar over it.
+                if (bar.contains(visible)) continue;
+                if (bar.centerY() < visible.centerY()) {
+                    visible.top = Math.max(visible.top, bar.bottom);
+                } else {
+                    visible.bottom = Math.min(visible.bottom, bar.top);
+                }
+                if (visible.height() <= 0) return null;
+            }
+        } catch (Throwable ex) {
+            Logger.printException(() -> "withoutBars failure", ex);
+        }
+        return visible;
+    }
+
     public static Object onOwnSwipeArea(Object modifier, Object section) {
         try {
             String key = section == null ? null : sectionKey(section, null);
