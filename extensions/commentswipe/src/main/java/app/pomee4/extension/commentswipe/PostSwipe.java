@@ -145,6 +145,13 @@ public final class PostSwipe {
         return false;  // Modified during patching.
     }
 
+    /**
+     * @return The key of a feed section (unique in its feed).
+     */
+    static String sectionKey(Object section, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
     static boolean isCoordinates(Object object, Object scratch) {
         return false;  // Modified during patching.
     }
@@ -460,7 +467,8 @@ public final class PostSwipe {
                 if (stale) continue;
                 onScreen.add(rect);
                 if (!rect.contains((int) x, (int) y)) continue;
-                if (card.kind == KIND_FEED && hasOwnSwipe(section)) return null;
+                // A swipe that starts on a gallery or a carousel is left to it.
+                if (card.kind == KIND_FEED && inOwnSwipeArea(section, x, y)) return null;
                 return new Target(card, section, context, rect);
             }
         } catch (Throwable ex) {
@@ -475,18 +483,7 @@ public final class PostSwipe {
      */
     private static Rect cardRect(Card card, Object bounds) throws Exception {
         Object coordinates = card.coordinates == null ? null : card.coordinates.get();
-        if (coordinates != null) {
-            if (!coordinatesAttached(coordinates, null)) return null;
-            long offset = coordinatesWindowOffset(coordinates, null);
-            long size = coordinatesSize(coordinates, null);
-            // Packed Offset: float bits of x and y. Packed IntSize: width and height.
-            float left = Float.intBitsToFloat((int) (offset >> 32));
-            float top = Float.intBitsToFloat((int) offset);
-            int width = (int) (size >> 32);
-            int height = (int) size;
-            if (width <= 0 || height <= 0) return null;
-            return new Rect(Math.round(left), Math.round(top), Math.round(left) + width, Math.round(top) + height);
-        }
+        if (coordinates != null) return coordinatesRect(coordinates);
         return bounds == null ? null : readRect(bounds);
     }
 
@@ -499,13 +496,85 @@ public final class PostSwipe {
                 && first.top < second.bottom - slack && second.top < first.bottom - slack;
     }
 
-    private static boolean hasOwnSwipe(Object section) {
+    /**
+     * @return If the point is on a part of the post with its own horizontal swipes (a gallery or a
+     * carousel), or such a part's position is not known yet.
+     */
+    private static boolean inOwnSwipeArea(Object section, float x, float y) throws Exception {
         Object children = sectionChildren(section, null);
         if (!(children instanceof Iterable)) return false;
         for (Object child : (Iterable<?>) children) {
-            if (child != null && isOwnSwipeSection(child, null)) return true;
+            if (child == null || !isOwnSwipeSection(child, null)) continue;
+            String key = sectionKey(child, null);
+            AreaCallback area = key == null ? null : areas.get(key);
+            Object coordinates = area == null || area.coordinates == null ? null : area.coordinates.get();
+            if (coordinates == null) return true;
+            Rect rect = coordinatesRect(coordinates);
+            if (rect == null || rect.contains((int) x, (int) y)) return true;
         }
         return false;
+    }
+
+    /**
+     * The window bounds of live layout coordinates, or null if they are not on screen.
+     */
+    private static Rect coordinatesRect(Object coordinates) {
+        if (!coordinatesAttached(coordinates, null)) return null;
+        long offset = coordinatesWindowOffset(coordinates, null);
+        long size = coordinatesSize(coordinates, null);
+        // Packed Offset: float bits of x and y. Packed IntSize: width and height.
+        float left = Float.intBitsToFloat((int) (offset >> 32));
+        float top = Float.intBitsToFloat((int) offset);
+        int width = (int) (size >> 32);
+        int height = (int) size;
+        if (width <= 0 || height <= 0) return null;
+        return new Rect(Math.round(left), Math.round(top), Math.round(left) + width, Math.round(top) + height);
+    }
+
+    /**
+     * The areas of the post parts with their own horizontal swipes, by section key. The callback stays
+     * the same while the part is composed again, see {@link #callbacks}.
+     */
+    private static final Map<String, AreaCallback> areas = Collections.synchronizedMap(
+            new LinkedHashMap<>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, AreaCallback> eldest) {
+                    return size() > MAX_CACHED_LINKS;
+                }
+            });
+
+    private static final class AreaCallback implements kotlin.jvm.functions.Function1<Object, Object> {
+        volatile WeakReference<Object> coordinates;
+
+        @Override
+        public Object invoke(Object coordinates) {
+            if (coordinates != null) this.coordinates = new WeakReference<>(coordinates);
+            return unit();
+        }
+    }
+
+    /**
+     * Injection point.
+     * <p>
+     * Called when a post part with its own horizontal swipes (a gallery or a carousel) is composed, with
+     * the modifier its content starts from.
+     *
+     * @return The modifier with a callback that keeps the part's layout coordinates.
+     */
+    public static Object onOwnSwipeArea(Object modifier, Object section) {
+        try {
+            String key = section == null ? null : sectionKey(section, null);
+            if (key == null) return modifier;
+            AreaCallback callback = areas.get(key);
+            if (callback == null) {
+                callback = new AreaCallback();
+                areas.put(key, callback);
+            }
+            return withPositionCallback(modifier, callback);
+        } catch (Throwable ex) {
+            Logger.printException(() -> "onOwnSwipeArea failure", ex);
+            return modifier;
+        }
     }
 
     private static volatile Method getValueMethod;

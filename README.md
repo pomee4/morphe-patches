@@ -32,8 +32,9 @@ action: a short swipe does the first, a longer swipe the second.
   Defaults: swipe left to upvote (downvote on a longer swipe), swipe right to collapse (reply).
 - **Posts**, in every post list (home, popular, subreddits, custom feeds, profiles, saved posts, history):
   upvote, downvote, save, hide, share, open comments, more options, open profile, open subreddit.
-  Defaults: swipe left to upvote (downvote), swipe right to save (hide). Posts with a gallery or a carousel
-  keep their own horizontal swipe. Search results are not supported yet.
+  Defaults: swipe left to upvote (downvote), swipe right to save (hide). On posts with a gallery or a carousel, a swipe
+  that starts on the gallery or carousel still pages it; a swipe that starts on the rest of the post swipes
+  the post. Search results are not supported yet.
 - Votes and Save toggle: swiping again undoes them. A hidden post can be brought back with Reddit's Undo.
 - If the second action is **None**, any swipe distance does the first action. If both actions of a direction
   are **None**, that direction does not swipe. Swiping back past the start switches to the other direction.
