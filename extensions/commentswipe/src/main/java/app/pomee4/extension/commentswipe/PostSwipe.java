@@ -152,6 +152,13 @@ public final class PostSwipe {
         return null;  // Modified during patching.
     }
 
+    /**
+     * @return The Compose Rect of the coordinates in the window, clipped by their parents.
+     */
+    static Object coordinatesVisibleBounds(Object coordinates, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
     static boolean isCoordinates(Object object, Object scratch) {
         return false;  // Modified during patching.
     }
@@ -520,6 +527,13 @@ public final class PostSwipe {
      */
     private static Rect coordinatesRect(Object coordinates) {
         if (!coordinatesAttached(coordinates, null)) return null;
+        // The part that its parents show: a post scrolled under a bar of the list is cut at the bar.
+        try {
+            Object visible = coordinatesVisibleBounds(coordinates, null);
+            if (visible != null) return rectOf(visible);
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visible bounds failure", ex);
+        }
         long offset = coordinatesWindowOffset(coordinates, null);
         long size = coordinatesSize(coordinates, null);
         // Packed Offset: float bits of x and y. Packed IntSize: width and height.
@@ -591,8 +605,13 @@ public final class PostSwipe {
             getValueMethod = getValue;
         }
         Object rect = getValue.invoke(bounds);
-        if (rect == null) return null;
+        return rect == null ? null : rectOf(rect);
+    }
 
+    /**
+     * Converts a Compose Rect (left, top, right, bottom) to a Rect, or null if it is empty.
+     */
+    private static Rect rectOf(Object rect) throws Exception {
         Field[] fields = rectFields;
         if (fields == null) {
             // The four float fields, in declaration order: left, top, right, bottom.

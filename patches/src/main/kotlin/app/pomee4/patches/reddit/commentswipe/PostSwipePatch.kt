@@ -185,6 +185,23 @@ internal val postSwipePatch = bytecodePatch {
             localRegisters = 2
         )
 
+        // boundsInWindow(coordinates, clipBounds = true): the part of the layout its parents show, as the
+        // same lambda uses it for another of its cases.
+        val visibleBounds = coordinateCallsStatic(positionedInvoke).firstOrNull { call ->
+            call.parameterTypes.map { it.toString() } == listOf(coordinatesType, "Z") &&
+                call.returnType.startsWith("L")
+        } ?: throw PatchException("No boundsInWindow call in ${positionedLambda.type}")
+        implementStub(
+            "coordinatesVisibleBounds", "Ljava/lang/Object;",
+            """
+                check-cast p0, $coordinatesType
+                const/4 p1, 0x1
+                invoke-static { p0, p1 }, $visibleBounds
+                move-result-object p0
+                return-object p0
+            """
+        )
+
         // Posts, for their saved state, vote, author and subreddit.
         LinkConstructorFingerprint.method.apply {
             instructions.withIndex()
@@ -354,3 +371,7 @@ internal fun BytecodePatchContext.implementStub(
         }.let(methods::add)
     }
 }
+
+private fun coordinateCallsStatic(method: Method) = method.implementation!!.instructions
+    .filter { it.opcode == Opcode.INVOKE_STATIC }
+    .map { (it as ReferenceInstruction).reference as MethodReference }
