@@ -50,13 +50,13 @@ val commentSwipeActionsPatch = bytecodePatch(
     name = "Comment swipe actions",
     description = "Adds swipe actions to comments: swipe a comment sideways to upvote, downvote, reply, save, " +
         "share, collapse or open the author's profile, picked by how far it is swiped. " +
-        "Settings: long press the Reddit icon, then Comment swipe settings."
+        "Settings: Reddit settings, General, Comment swipe."
 ) {
     compatibleWith(COMPATIBILITY_REDDIT)
 
-    dependsOn(settingsActivityPatch)
+    dependsOn(settingsActivityPatch, settingsRowPatch)
 
-    extendWith("extensions/commentswipe.mpe")
+    // The extension is added by settingsRowPatch.
 
     execute {
         // Watch the window's touch events, to take over a sideways swipe on a comment.

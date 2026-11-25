@@ -2,10 +2,7 @@ package app.pomee4.extension.commentswipe;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
-import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.ListPreference;
@@ -21,40 +18,25 @@ import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeDirection
 
 /**
  * Settings screen of the comment swipe actions. Added to the manifest during patching and opened
- * from the "Comment swipe settings" shortcut of the Reddit launcher icon (long press the icon).
+ * from the "Comment swipe" row of the Reddit settings (General section).
  */
 @SuppressWarnings("deprecation")
 public final class SettingsActivity extends Activity {
     private static final String SHORTCUT_ID = "pomee4_comment_swipe_settings";
-    private static boolean shortcutPublished;
+    private static boolean oldShortcutRemoved;
 
     /**
-     * Adds the settings shortcut to the launcher icon, once per process.
+     * Removes the launcher shortcut of older versions of the patch, once per process.
+     * The settings are now a row of the Reddit settings.
      */
-    static void publishShortcut(Context context) {
-        if (shortcutPublished) return;
-        shortcutPublished = true;
+    static void removeOldShortcut(Context context) {
+        if (oldShortcutRemoved) return;
+        oldShortcutRemoved = true;
         try {
             ShortcutManager manager = context.getSystemService(ShortcutManager.class);
-            if (manager == null) return;
-
-            Intent intent = new Intent(Intent.ACTION_VIEW)
-                    .setClassName(context.getPackageName(), SettingsActivity.class.getName());
-            ShortcutInfo shortcut = new ShortcutInfo.Builder(context, SHORTCUT_ID)
-                    .setShortLabel("Swipe settings")
-                    .setLongLabel("Comment swipe settings")
-                    .setIcon(Icon.createWithResource("android", android.R.drawable.ic_menu_preferences))
-                    .setIntent(intent)
-                    .setRank(99)
-                    .build();
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                manager.pushDynamicShortcut(shortcut);
-            } else {
-                manager.addDynamicShortcuts(Collections.singletonList(shortcut));
-            }
+            if (manager != null) manager.removeDynamicShortcuts(Collections.singletonList(SHORTCUT_ID));
         } catch (Exception ex) {
-            Logger.printException(() -> "publishShortcut failure", ex);
+            Logger.printException(() -> "removeOldShortcut failure", ex);
         }
     }
 

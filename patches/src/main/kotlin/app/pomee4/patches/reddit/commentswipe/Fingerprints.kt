@@ -8,6 +8,8 @@
 package app.pomee4.patches.reddit.commentswipe
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.InstructionLocation
+import app.morphe.patcher.methodCall
 import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.newInstance
@@ -86,3 +88,113 @@ internal val UnsaveEventFingerprint = CommentEventFingerprint("OnClickUnsaveEven
 internal val ShareEventFingerprint = CommentEventFingerprint("OnClickShareEvent(")
 internal val CollapseThreadEventFingerprint = CommentEventFingerprint("OnClickCollapseThreadEvent(")
 internal val OverflowMenuEventFingerprint = CommentEventFingerprint("OnClickOverflowMenuEvent(")
+
+internal const val USER_SETTINGS_SECTION_CLASS =
+    "Lcom/reddit/settings/usersettings/UserSettingsSection;"
+
+/**
+ * Constructor of the Compose settings row "Privacy policy", which is copied as the comment swipe
+ * settings row. The class is shared with other rows of the About section. Reddit 2026.30.0+.
+ */
+internal object SettingRowConstructorFingerprint : Fingerprint(
+    name = "<init>",
+    returnType = "V",
+    filters = listOf(
+        string("key_pref_privacy_policy"),
+        // Field of the row key.
+        fieldAccess(
+            opcode = Opcode.IPUT_OBJECT,
+            type = "Ljava/lang/String;",
+            location = InstructionLocation.MatchAfterImmediately()
+        )
+    )
+)
+
+/**
+ * Parameters of the settings row composable: title, on click, modifier, ?, subtitle, leading icon,
+ * trailing content, ?, ?, composer, changed, defaults. "L" is any object type.
+ */
+internal val SETTING_ROW_PARAMETERS = listOf(
+    "Ljava/lang/String;",
+    "Lkotlin/jvm/functions/Function0;",
+    "L",
+    "Z",
+    "Ljava/lang/String;",
+    "Lkotlin/jvm/functions/Function2;",
+    "Lkotlin/jvm/functions/Function2;",
+    "L",
+    "Z",
+    "L",
+    "I",
+    "I"
+)
+
+/**
+ * Composable content of the rows of the "Privacy policy" row class.
+ */
+internal object SettingRowContentFingerprint : Fingerprint(
+    classFingerprint = SettingRowConstructorFingerprint,
+    returnType = "V",
+    parameters = listOf("L", "L", "I"),
+    filters = listOf(
+        methodCall(
+            opcode = Opcode.INVOKE_STATIC_RANGE,
+            returnType = "V",
+            parameters = SETTING_ROW_PARAMETERS
+        )
+    )
+)
+
+/**
+ * Section of the settings row.
+ */
+internal object SettingRowSectionFingerprint : Fingerprint(
+    classFingerprint = SettingRowConstructorFingerprint,
+    isStatic = false,
+    returnType = USER_SETTINGS_SECTION_CLASS,
+    parameters = listOf()
+)
+
+/**
+ * Order of the settings row in its section.
+ */
+internal object SettingRowOrderFingerprint : Fingerprint(
+    classFingerprint = SettingRowConstructorFingerprint,
+    name = "getOrder",
+    returnType = "I",
+    parameters = listOf()
+)
+
+/**
+ * Constructor of the registry of all Compose settings rows and sections (rows, sections).
+ */
+internal object SettingsRegistryConstructorFingerprint : Fingerprint(
+    name = "<init>",
+    returnType = "V",
+    parameters = listOf("Ljava/util/Set;", "Ljava/util/Set;"),
+    filters = listOf(
+        newInstance("Lcom/reddit/settings/usersettings/UserSettingsContributionException;")
+    )
+)
+
+/**
+ * Icon data of the Reddit icon set: (packed size, drawable resource id, auto mirrored).
+ */
+internal object IconDataToStringFingerprint : Fingerprint(
+    name = "toString",
+    returnType = "Ljava/lang/String;",
+    parameters = listOf(),
+    filters = listOf(
+        string("Icon(resourceId=")
+    )
+)
+
+/**
+ * Icon composable of the Reddit icon set.
+ * (icon, content description, modifier, tint, ?, composer, changed, defaults)
+ */
+internal class IconComposableFingerprint(iconDataType: String) : Fingerprint(
+    isStatic = true,
+    returnType = "V",
+    parameters = listOf(iconDataType, "Ljava/lang/String;", "L", "J", "Z", "L", "I", "I")
+)

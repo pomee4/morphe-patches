@@ -28,9 +28,10 @@ Then patch the app with both Morphe Patches and pomee4 Patches selected.
 Swipe a comment sideways to upvote, downvote, reply, save, share, collapse the thread, open the overflow
 menu or open the author's profile. How far you swipe picks one of up to three actions.
 
-**Settings:** long press the Reddit app icon and pick **Comment swipe settings**. There you can turn the
-swipe actions on or off, pick the first, second and third action, the swipe direction and whether each
-action vibrates.
+**Settings:** in Reddit, open **Settings** and tap **Comment swipe** in the **General** section, under
+**Morphe**. There you can turn the swipe actions on or off, pick the first, second and third action, the
+swipe direction and whether each action vibrates. The settings row needs the Morphe Patches settings of
+Reddit 2026.30.0 or newer, which every Reddit patch of Morphe Patches applies.
 
 The patch has its own extension and settings, so it does not depend on the Reddit patches of Morphe
 Patches and keeps working when they change.

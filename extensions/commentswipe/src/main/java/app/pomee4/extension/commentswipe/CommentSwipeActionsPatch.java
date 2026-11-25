@@ -196,7 +196,8 @@ public final class CommentSwipeActionsPatch {
     public static void onActivityCreated(Activity activity) {
         try {
             Settings.init(activity);
-            SettingsActivity.publishShortcut(activity);
+            currentActivity = new WeakReference<>(activity);
+            SettingsActivity.removeOldShortcut(activity);
             if (!lifecycleCallbacksRegistered) {
                 lifecycleCallbacksRegistered = true;
                 // Comments also show in other activities, such as the full screen media player.
@@ -209,6 +210,15 @@ public final class CommentSwipeActionsPatch {
     }
 
     private static boolean lifecycleCallbacksRegistered;
+
+    private static volatile WeakReference<Activity> currentActivity = new WeakReference<>(null);
+
+    /**
+     * @return The activity that was last created or resumed, or null.
+     */
+    static Activity currentActivity() {
+        return currentActivity.get();
+    }
 
     /**
      * Windows already watched. AppCompat wraps the window callback after it is first watched,
@@ -240,6 +250,7 @@ public final class CommentSwipeActionsPatch {
 
         @Override
         public void onActivityResumed(Activity activity) {
+            currentActivity = new WeakReference<>(activity);
         }
 
         @Override
