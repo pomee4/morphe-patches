@@ -210,20 +210,41 @@ public final class PostSwipe {
                 candidates = new ArrayList<>(cards.values());
             }
             candidates.sort(Comparator.comparingLong((Card card) -> card.positionedAt).reversed());
+            List<Rect> onScreen = new ArrayList<>();
             for (Card card : candidates) {
                 Object bounds = card.bounds.get();
                 Object section = card.section.get();
                 Object context = card.context.get();
                 if (bounds == null || section == null || context == null) continue;
                 Rect rect = readRect(bounds);
-                if (rect == null || !rect.contains((int) x, (int) y)) continue;
-                // The newest card at the point is the visible one.
+                if (rect == null) continue;
+                // Cards on screen never overlap. A card that overlaps a card laid out after it has
+                // left the screen, and its bounds are the last ones it had there.
+                boolean stale = false;
+                for (Rect newer : onScreen) {
+                    if (overlaps(newer, rect)) {
+                        stale = true;
+                        break;
+                    }
+                }
+                if (stale) continue;
+                onScreen.add(rect);
+                if (!rect.contains((int) x, (int) y)) continue;
                 return hasOwnSwipe(section) ? null : new Target(section, context, rect);
             }
         } catch (Throwable ex) {
             Logger.printException(() -> "findTarget failure", ex);
         }
         return null;
+    }
+
+    /**
+     * Overlap of more than a few pixels, so cards that touch do not count.
+     */
+    private static boolean overlaps(Rect first, Rect second) {
+        int slack = 4;
+        return first.left < second.right - slack && second.left < first.right - slack
+                && first.top < second.bottom - slack && second.top < first.bottom - slack;
     }
 
     private static boolean hasOwnSwipe(Object section) {
