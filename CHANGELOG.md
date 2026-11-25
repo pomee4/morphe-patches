@@ -1,3 +1,9 @@
+## [3.2.0](https://github.com/pomee4/morphe-patches/compare/v3.1.0...v3.2.0) (2026-11-25)
+
+### ✨ New Features
+
+* **Reddit:** Open the comment swipe settings from the Reddit settings ([46b6f94](https://github.com/pomee4/morphe-patches/commit/46b6f9400f705eee4d168e7dc0b9f602874576d3))
+
 ## [3.1.0](https://github.com/pomee4/morphe-patches/compare/v3.0.0...v3.1.0) (2026-11-24)
 
 ### ✨ New Features
