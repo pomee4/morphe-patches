@@ -48,25 +48,47 @@ public final class PostSwipe {
 
     private static final int MAX_CACHED_LINKS = 1000;
 
+    /**
+     * A feed post card (FeedPostSection).
+     */
+    static final int KIND_FEED = 0;
+    /**
+     * A conversation post: a text post shown with its top comments (ConversationPostSection).
+     */
+    static final int KIND_CONVERSATION = 1;
+    /**
+     * A post preview: a text post shown with a header, a title and a preview of its text (PostPreviewSection).
+     */
+    static final int KIND_PREVIEW = 2;
+
     static final class Card {
-        final WeakReference<Object> section;
-        final WeakReference<Object> context;
+        volatile WeakReference<Object> section;
+        volatile WeakReference<Object> context;
+        /**
+         * The state that holds the bounds of a feed post card, or null for a conversation post.
+         */
         final WeakReference<Object> bounds;
+        /**
+         * The kind of post section: {@link #KIND_FEED}, {@link #KIND_CONVERSATION} or {@link #KIND_PREVIEW}.
+         */
+        final int kind;
         long positionedAt;
         /**
          * The live layout coordinates of the card, from its last position update.
          */
         WeakReference<Object> coordinates;
 
-        Card(Object section, Object context, Object bounds) {
+        Card(Object section, Object context, Object bounds, int kind) {
             this.section = new WeakReference<>(section);
             this.context = new WeakReference<>(context);
             this.bounds = new WeakReference<>(bounds);
+            this.kind = kind;
         }
     }
 
     /**
-     * The post cards, by the state object that holds their bounds.
+     * The post cards: feed post cards by the state object that holds their bounds, conversation posts by
+     * their position callback.
      */
     private static final Map<Object, Card> cards = Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -145,6 +167,52 @@ public final class PostSwipe {
         return 0;  // Modified during patching.
     }
 
+    static String conversationLinkKindWithId(Object section, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
+    static String conversationUniqueId(Object section, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
+    /**
+     * @return A new post identifier (PostId) of the conversation post.
+     */
+    static Object conversationIdentifier(Object section, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
+    static String previewLinkKindWithId(Object section, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
+    static String previewUniqueId(Object section, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
+    static Object previewIdentifier(Object section, Object scratch) {
+        return null;  // Modified during patching.
+    }
+
+    static boolean previewPromoted(Object section, Object scratch) {
+        return false;  // Modified during patching.
+    }
+
+    static boolean previewRecommended(Object section, Object scratch) {
+        return false;  // Modified during patching.
+    }
+
+    static boolean previewSubredditMember(Object section, Object scratch) {
+        return false;  // Modified during patching.
+    }
+
+    /**
+     * @return The modifier (or the default modifier if null) with an onGloballyPositioned callback.
+     */
+    static Object withPositionCallback(Object modifier, Object callback) {
+        return modifier;  // Modified during patching.
+    }
+
     static Object contextEventSink(Object context, Object scratch) {
         return null;  // Modified during patching.
     }
@@ -171,7 +239,7 @@ public final class PostSwipe {
             if (section == null || context == null || bounds == null) return;
             Card card = cards.get(bounds);
             if (card == null || card.section.get() != section || card.context.get() != context) {
-                Card newCard = new Card(section, context, bounds);
+                Card newCard = new Card(section, context, bounds, KIND_FEED);
                 if (card != null) {
                     newCard.positionedAt = card.positionedAt;
                     newCard.coordinates = card.coordinates;
@@ -202,6 +270,109 @@ public final class PostSwipe {
     /**
      * Injection point.
      * <p>
+     * Called when a conversation post is composed, with the modifier of its content.
+     *
+     * @return The modifier with a callback that keeps the post's layout coordinates.
+     */
+    public static Object onConversationPost(Object modifier, Object section, Object context) {
+        return withCard(modifier, section, context, KIND_CONVERSATION);
+    }
+
+    /**
+     * Injection point.
+     * <p>
+     * Called when a post preview is composed, with the modifier of its content.
+     *
+     * @return The modifier with a callback that keeps the post's layout coordinates.
+     */
+    public static Object onPreviewPost(Object modifier, Object section, Object context) {
+        return withCard(modifier, section, context, KIND_PREVIEW);
+    }
+
+    /**
+     * The position callback of each conversation and preview post, by post id and kind. A post keeps its
+     * callback when it is composed again: Compose only replaces the callback of a laid out modifier, and a
+     * replaced callback is not called until the post moves.
+     */
+    private static final Map<String, PositionCallback> callbacks = Collections.synchronizedMap(
+            new LinkedHashMap<>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, PositionCallback> eldest) {
+                    return size() > MAX_CACHED_LINKS;
+                }
+            });
+
+    private static Object withCard(Object modifier, Object section, Object context, int kind) {
+        try {
+            if (section == null || context == null) return modifier;
+            String id = kind == KIND_CONVERSATION
+                    ? conversationLinkKindWithId(section, null)
+                    : previewLinkKindWithId(section, null);
+            String key = kind + ":" + id;
+            PositionCallback callback = callbacks.get(key);
+            if (callback == null) {
+                callback = new PositionCallback();
+                Card card = new Card(section, context, null, kind);
+                callback.card = card;
+                callbacks.put(key, callback);
+                cards.put(callback, card);
+            } else {
+                Card card = callback.card;
+                card.section = new WeakReference<>(section);
+                card.context = new WeakReference<>(context);
+                cards.put(callback, card);
+            }
+            return withPositionCallback(modifier, callback);
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Post position callback failure", ex);
+            return modifier;
+        }
+    }
+
+    private static volatile Object unit;
+
+    /**
+     * @return kotlin.Unit, by its type: Reddit renames its INSTANCE field.
+     */
+    private static Object unit() {
+        Object value = unit;
+        if (value != null) return value;
+        try {
+            Class<?> type = Class.forName("kotlin.Unit", true, PostSwipe.class.getClassLoader());
+            for (Field field : type.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers()) && field.getType() == type) {
+                    field.setAccessible(true);
+                    value = field.get(null);
+                    unit = value;
+                    return value;
+                }
+            }
+        } catch (Throwable ex) {
+            Logger.printException(() -> "kotlin.Unit not found", ex);
+        }
+        return null;
+    }
+
+    /**
+     * onGloballyPositioned callback of a conversation post or a post preview.
+     */
+    private static final class PositionCallback implements kotlin.jvm.functions.Function1<Object, Object> {
+        Card card;
+
+        @Override
+        public Object invoke(Object coordinates) {
+            Card current = card;
+            if (current != null) {
+                current.positionedAt = SystemClock.uptimeMillis();
+                if (coordinates != null) current.coordinates = new WeakReference<>(coordinates);
+            }
+            return unit();
+        }
+    }
+
+    /**
+     * Injection point.
+     * <p>
      * Called at the end of the Link constructor.
      */
     public static void onLinkCreated(Object link) {
@@ -221,14 +392,40 @@ public final class PostSwipe {
      * A post card under the finger, with its bounds in the window.
      */
     static final class Target {
-        final Object section;
         final Object context;
         final Rect bounds;
+        final String linkKindWithId;
+        final String uniqueId;
+        final Object identifier;
+        final boolean promoted;
+        final boolean recommended;
+        final boolean subredditMember;
 
-        Target(Object section, Object context, Rect bounds) {
-            this.section = section;
+        Target(Card card, Object section, Object context, Rect bounds) {
             this.context = context;
             this.bounds = bounds;
+            if (card.kind == KIND_CONVERSATION) {
+                linkKindWithId = conversationLinkKindWithId(section, null);
+                uniqueId = conversationUniqueId(section, null);
+                identifier = conversationIdentifier(section, null);
+                promoted = false;
+                recommended = false;
+                subredditMember = false;
+            } else if (card.kind == KIND_PREVIEW) {
+                linkKindWithId = previewLinkKindWithId(section, null);
+                uniqueId = previewUniqueId(section, null);
+                identifier = previewIdentifier(section, null);
+                promoted = previewPromoted(section, null);
+                recommended = previewRecommended(section, null);
+                subredditMember = previewSubredditMember(section, null);
+            } else {
+                linkKindWithId = sectionLinkKindWithId(section, null);
+                uniqueId = sectionUniqueId(section, null);
+                identifier = sectionIdentifier(section, null);
+                promoted = sectionPromoted(section, null);
+                recommended = sectionRecommended(section, null);
+                subredditMember = sectionSubredditMember(section, null);
+            }
         }
     }
 
@@ -248,7 +445,7 @@ public final class PostSwipe {
                 Object bounds = card.bounds.get();
                 Object section = card.section.get();
                 Object context = card.context.get();
-                if (bounds == null || section == null || context == null) continue;
+                if (section == null || context == null || (bounds == null && card.kind == KIND_FEED)) continue;
                 Rect rect = cardRect(card, bounds);
                 if (rect == null) continue;
                 // Cards on screen never overlap. A card that overlaps a card laid out after it has
@@ -263,7 +460,8 @@ public final class PostSwipe {
                 if (stale) continue;
                 onScreen.add(rect);
                 if (!rect.contains((int) x, (int) y)) continue;
-                return hasOwnSwipe(section) ? null : new Target(section, context, rect);
+                if (card.kind == KIND_FEED && hasOwnSwipe(section)) return null;
+                return new Target(card, section, context, rect);
             }
         } catch (Throwable ex) {
             Logger.printException(() -> "findTarget failure", ex);
@@ -289,7 +487,7 @@ public final class PostSwipe {
             if (width <= 0 || height <= 0) return null;
             return new Rect(Math.round(left), Math.round(top), Math.round(left) + width, Math.round(top) + height);
         }
-        return readRect(bounds);
+        return bounds == null ? null : readRect(bounds);
     }
 
     /**
@@ -352,11 +550,10 @@ public final class PostSwipe {
 
     static void perform(Activity activity, Target target, PostAction action) {
         try {
-            Object section = target.section;
-            String linkKindWithId = sectionLinkKindWithId(section, null);
-            String uniqueId = sectionUniqueId(section, null);
-            Object identifier = sectionIdentifier(section, null);
-            boolean promoted = sectionPromoted(section, null);
+            String linkKindWithId = target.linkKindWithId;
+            String uniqueId = target.uniqueId;
+            Object identifier = target.identifier;
+            boolean promoted = target.promoted;
             Object link = getLink(linkKindWithId);
 
             Object event;
@@ -400,9 +597,9 @@ public final class PostSwipe {
                     event = create("com.reddit.feeds.ui.events.OnOverflowMenuOpened", 7,
                             linkKindWithId, uniqueId, promoted,
                             enumValue("com.reddit.feeds.ui.OverflowMenuType",
-                                    sectionRecommended(section, null) ? "POST_RECOMMENDED" : "POST_DEFAULT"),
+                                    target.recommended ? "POST_RECOMMENDED" : "POST_DEFAULT"),
                             enumValue("com.reddit.feeds.ui.OverflowMenuTrigger", "LONG_PRESS"),
-                            identifier, sectionSubredditMember(section, null));
+                            identifier, target.subredditMember);
                     break;
                 case PROFILE: {
                     String author = link == null ? null : (String) invoke(link, "getAuthor");

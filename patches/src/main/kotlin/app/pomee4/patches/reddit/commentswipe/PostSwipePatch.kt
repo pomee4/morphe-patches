@@ -4,6 +4,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.StringComparisonType
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
@@ -15,6 +16,7 @@ import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
@@ -228,6 +230,10 @@ internal val postSwipePatch = bytecodePatch {
         getter("sectionSubredditMember", "Z", sectionField(SECTION_SUBREDDIT_MEMBER, "Z"))
         getter("sectionChildren", "Ljava/lang/Object;", sectionField(SECTION_CHILDREN))
 
+        val positionModifier = positionModifier(cardInvoke)
+        conversationPosts(positionModifier, contextType)
+        previewPosts(positionModifier, contextType)
+
         // Child sections with their own horizontal swipes, where a post swipe is not started.
         val ownSwipeSections = OWN_SWIPE_SECTIONS.flatMap { prefix ->
             classDefByStrings(prefix, StringComparisonType.STARTS_WITH)
@@ -278,7 +284,7 @@ private fun Method.isTransitionHelper(contextType: String, transitionType: Strin
 /**
  * @return The fields the constructor of a data class stores its parameters in, by parameter position.
  */
-private fun constructorFields(classDef: ClassDef): Map<Int, FieldReference> {
+internal fun constructorFields(classDef: ClassDef): Map<Int, FieldReference> {
     val constructor = classDef.methods
         .filter { it.name == "<init>" }
         .maxByOrNull { it.parameterTypes.size }
@@ -321,7 +327,7 @@ private fun constructorFields(classDef: ClassDef): Map<Int, FieldReference> {
  * Replaces a stub of the extension, which has an object parameter and an unused scratch parameter, with
  * the given body, which uses the parameter registers and the given number of local registers.
  */
-private fun BytecodePatchContext.implementStub(
+internal fun BytecodePatchContext.implementStub(
     name: String,
     returnType: String,
     smali: String,

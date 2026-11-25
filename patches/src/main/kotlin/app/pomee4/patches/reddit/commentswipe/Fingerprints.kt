@@ -239,3 +239,28 @@ internal object OpenCommentsEventFingerprint : Fingerprint(
     name = "toString",
     returnType = "Ljava/lang/String;",
 )
+
+/**
+ * The section of a post preview (a text post shown with a header, a title and a preview of its text),
+ * by its toString.
+ */
+internal object PostPreviewSectionToStringFingerprint : Fingerprint(
+    name = "toString",
+    returnType = "Ljava/lang/String;",
+    parameters = listOf(),
+    filters = listOf(
+        string("PostPreviewSection(data=", StringComparisonType.STARTS_WITH)
+    )
+)
+
+/**
+ * The section of a conversation post (a text post shown with its top comments), by its toString.
+ */
+internal object ConversationPostSectionToStringFingerprint : Fingerprint(
+    name = "toString",
+    returnType = "Ljava/lang/String;",
+    parameters = listOf(),
+    filters = listOf(
+        string("ConversationPostSection(element=", StringComparisonType.STARTS_WITH)
+    )
+)
