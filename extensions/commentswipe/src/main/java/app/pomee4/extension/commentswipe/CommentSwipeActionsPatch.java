@@ -654,12 +654,16 @@ public final class CommentSwipeActionsPatch {
                         // A post: the card under the finger.
                         PostSwipe.Target target = Settings.POST_SWIPE_ACTIONS.get()
                                 ? PostSwipe.findTarget(downX, downY) : null;
-                        if (target == null || postActions(rightToLeft).length == 0) {
+                        // Only the part on screen slides: a post card can reach past the window.
+                        View decor = activity.getWindow().getDecorView();
+                        Rect visible = target == null ? null : new Rect(target.bounds);
+                        if (visible == null || !visible.intersect(0, 0, decor.getWidth(), decor.getHeight())
+                                || postActions(rightToLeft).length == 0) {
                             state = IGNORED;
                             return false;
                         }
                         post = target;
-                        startSwipe(event, target.bounds, postActions(true), postActions(false));
+                        startSwipe(event, visible, postActions(true), postActions(false));
                     }
                     if (overlay != null) overlay.update(dx);
                     return true;

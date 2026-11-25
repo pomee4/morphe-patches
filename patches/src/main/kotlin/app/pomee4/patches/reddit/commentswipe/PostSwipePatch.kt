@@ -111,16 +111,76 @@ internal val postSwipePatch = bytecodePatch {
             """
         )
 
-        // Mark the card as on screen when its bounds are updated.
+        // Keep the layout coordinates the card gets when it is positioned. They are live, so they give
+        // the card's position at the time of a swipe, also while the list scrolls.
         val positionedLambda = mutableClassDefBy(positionedLambdaInit.definingClass)
         val positionedBoundsField = positionedLambda.fields.single { it.type == boundsType }
-        positionedLambda.methods.single { it.name == "invoke" && it.parameterTypes.size == 1 }.addInstructions(
+        val positionedInvoke = positionedLambda.methods.single {
+            it.name == "invoke" && it.parameterTypes.size == 1
+        }
+
+        // The card's bounds are made with localToWindow(Offset.Zero) and size of the coordinates.
+        val coordinateCalls = positionedInvoke.implementation!!.instructions
+            .filter { it.opcode == Opcode.INVOKE_INTERFACE }
+            .map { (it as ReferenceInstruction).reference as MethodReference }
+        val localToWindow = coordinateCalls.firstOrNull { call ->
+            call.returnType == "J" && call.parameterTypes.map { it.toString() } == listOf("J") &&
+                coordinateCalls.any { it.definingClass == call.definingClass && it.returnType == "J" && it.parameterTypes.isEmpty() }
+        } ?: throw PatchException("No localToWindow call in ${positionedLambda.type}")
+        val coordinatesType = localToWindow.definingClass
+        val size = coordinateCalls.first {
+            it.definingClass == coordinatesType && it.returnType == "J" && it.parameterTypes.isEmpty()
+        }
+        val isAttached = classDefBy(coordinatesType).methods.filter {
+            it.returnType == "Z" && it.parameterTypes.isEmpty()
+        }.singleOrNull() ?: throw PatchException("No isAttached in $coordinatesType")
+
+        positionedInvoke.addInstructions(
             0,
             """
                 move-object/from16 v0, p0
                 iget-object v0, v0, $positionedBoundsField
-                invoke-static { v0 }, $POST_EXTENSION_CLASS->onBoundsChanged(Ljava/lang/Object;)V
+                move-object/from16 v1, p1
+                invoke-static { v0, v1 }, $POST_EXTENSION_CLASS->onBoundsChanged(Ljava/lang/Object;Ljava/lang/Object;)V
             """
+        )
+
+        implementStub(
+            "isCoordinates", "Z",
+            """
+                instance-of p1, p0, $coordinatesType
+                return p1
+            """
+        )
+        implementStub(
+            "coordinatesAttached", "Z",
+            """
+                check-cast p0, $coordinatesType
+                invoke-interface { p0 }, $coordinatesType->${isAttached.name}()Z
+                move-result p1
+                return p1
+            """
+        )
+        implementStub(
+            "coordinatesWindowOffset", "J",
+            """
+                check-cast p0, $coordinatesType
+                const-wide/16 v0, 0x0
+                invoke-interface { p0, v0, v1 }, $coordinatesType->${localToWindow.name}(J)J
+                move-result-wide v0
+                return-wide v0
+            """,
+            localRegisters = 2
+        )
+        implementStub(
+            "coordinatesSize", "J",
+            """
+                check-cast p0, $coordinatesType
+                invoke-interface { p0 }, $coordinatesType->${size.name}()J
+                move-result-wide v0
+                return-wide v0
+            """,
+            localRegisters = 2
         )
 
         // Posts, for their saved state, vote, author and subreddit.
@@ -259,9 +319,14 @@ private fun constructorFields(classDef: ClassDef): Map<Int, FieldReference> {
 
 /**
  * Replaces a stub of the extension, which has an object parameter and an unused scratch parameter, with
- * a body that uses only the parameter registers.
+ * the given body, which uses the parameter registers and the given number of local registers.
  */
-private fun BytecodePatchContext.implementStub(name: String, returnType: String, smali: String) {
+private fun BytecodePatchContext.implementStub(
+    name: String,
+    returnType: String,
+    smali: String,
+    localRegisters: Int = 0,
+) {
     mutableClassDefBy(POST_EXTENSION_CLASS).apply {
         val stub = methods.single { it.name == name }
         methods.remove(stub)
@@ -276,7 +341,7 @@ private fun BytecodePatchContext.implementStub(name: String, returnType: String,
             stub.accessFlags,
             null,
             null,
-            MutableMethodImplementation(2),
+            MutableMethodImplementation(2 + localRegisters),
         ).toMutable().apply {
             addInstructionsWithLabels(0, smali)
         }.let(methods::add)

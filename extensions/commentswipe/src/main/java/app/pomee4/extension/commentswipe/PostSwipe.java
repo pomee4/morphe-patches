@@ -53,6 +53,10 @@ public final class PostSwipe {
         final WeakReference<Object> context;
         final WeakReference<Object> bounds;
         long positionedAt;
+        /**
+         * The live layout coordinates of the card, from its last position update.
+         */
+        WeakReference<Object> coordinates;
 
         Card(Object section, Object context, Object bounds) {
             this.section = new WeakReference<>(section);
@@ -119,6 +123,28 @@ public final class PostSwipe {
         return false;  // Modified during patching.
     }
 
+    static boolean isCoordinates(Object object, Object scratch) {
+        return false;  // Modified during patching.
+    }
+
+    static boolean coordinatesAttached(Object coordinates, Object scratch) {
+        return false;  // Modified during patching.
+    }
+
+    /**
+     * @return The packed window Offset of the top left corner of the coordinates.
+     */
+    static long coordinatesWindowOffset(Object coordinates, Object scratch) {
+        return 0;  // Modified during patching.
+    }
+
+    /**
+     * @return The packed IntSize of the coordinates.
+     */
+    static long coordinatesSize(Object coordinates, Object scratch) {
+        return 0;  // Modified during patching.
+    }
+
     static Object contextEventSink(Object context, Object scratch) {
         return null;  // Modified during patching.
     }
@@ -146,7 +172,10 @@ public final class PostSwipe {
             Card card = cards.get(bounds);
             if (card == null || card.section.get() != section || card.context.get() != context) {
                 Card newCard = new Card(section, context, bounds);
-                if (card != null) newCard.positionedAt = card.positionedAt;
+                if (card != null) {
+                    newCard.positionedAt = card.positionedAt;
+                    newCard.coordinates = card.coordinates;
+                }
                 cards.put(bounds, newCard);
             }
         } catch (Exception ex) {
@@ -160,10 +189,14 @@ public final class PostSwipe {
      * Called when a layout position callback runs, with the state it updates. Only post cards that are
      * on screen are laid out, so the newest card at a point is the visible one.
      */
-    public static void onBoundsChanged(Object bounds) {
+    public static void onBoundsChanged(Object bounds, Object argument) {
         if (bounds == null) return;
         Card card = cards.get(bounds);
-        if (card != null) card.positionedAt = SystemClock.uptimeMillis();
+        if (card == null) return;
+        card.positionedAt = SystemClock.uptimeMillis();
+        if (argument != null && isCoordinates(argument, null)) {
+            card.coordinates = new WeakReference<>(argument);
+        }
     }
 
     /**
@@ -216,7 +249,7 @@ public final class PostSwipe {
                 Object section = card.section.get();
                 Object context = card.context.get();
                 if (bounds == null || section == null || context == null) continue;
-                Rect rect = readRect(bounds);
+                Rect rect = cardRect(card, bounds);
                 if (rect == null) continue;
                 // Cards on screen never overlap. A card that overlaps a card laid out after it has
                 // left the screen, and its bounds are the last ones it had there.
@@ -236,6 +269,27 @@ public final class PostSwipe {
             Logger.printException(() -> "findTarget failure", ex);
         }
         return null;
+    }
+
+    /**
+     * The card's bounds in the window now, from its live layout coordinates, or else the bounds it got at
+     * its last position update. Null if the card is not on screen.
+     */
+    private static Rect cardRect(Card card, Object bounds) throws Exception {
+        Object coordinates = card.coordinates == null ? null : card.coordinates.get();
+        if (coordinates != null) {
+            if (!coordinatesAttached(coordinates, null)) return null;
+            long offset = coordinatesWindowOffset(coordinates, null);
+            long size = coordinatesSize(coordinates, null);
+            // Packed Offset: float bits of x and y. Packed IntSize: width and height.
+            float left = Float.intBitsToFloat((int) (offset >> 32));
+            float top = Float.intBitsToFloat((int) offset);
+            int width = (int) (size >> 32);
+            int height = (int) size;
+            if (width <= 0 || height <= 0) return null;
+            return new Rect(Math.round(left), Math.round(top), Math.round(left) + width, Math.round(top) + height);
+        }
+        return readRect(bounds);
     }
 
     /**
