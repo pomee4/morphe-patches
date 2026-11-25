@@ -652,7 +652,7 @@ public final class CommentSwipeActionsPatch {
                         int top = Math.round(downY - current.y);
                         // The part of the comment under a bar of the screen is not swiped.
                         Rect visible = PostSwipe.withoutBars(
-                                new Rect(left, top, left + current.width, top + current.height));
+                                new Rect(left, top, left + current.width, top + current.height), downY);
                         if (visible == null) {
                             state = IGNORED;
                             return false;

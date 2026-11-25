@@ -475,7 +475,7 @@ public final class PostSwipe {
                 onScreen.add(rect);
                 if (!rect.contains((int) x, (int) y)) continue;
                 // The part under a bar of the screen is not swiped, and a swipe on the bar is the bar's.
-                Rect visible = withoutBars(rect);
+                Rect visible = withoutBars(rect, y);
                 if (visible == null || !visible.contains((int) x, (int) y)) return null;
                 // A swipe that starts on a gallery or a carousel is left to it.
                 if (card.kind == KIND_FEED && inOwnSwipeArea(section, x, y)) return null;
@@ -580,11 +580,12 @@ public final class PostSwipe {
      */
     /**
      * Test tags of the bars that are drawn over lists: app bars, toolbars, tab bars, the bottom navigation and
-     * the bars of feeds (feed options, sort bars, sticky headers).
+     * the bars of feeds (feed options, sort bars, sticky headers) and the "Join the conversation" bar of
+     * comment pages.
      */
     private static final String[] BAR_TAGS = {
             "app_bar", "top_bar", "toolbar", "tab_bar", "bottom_nav", "feed_options", "feed_controls",
-            "sort_bar", "sticky_header"
+            "sort_bar", "sticky_header", "add_comment_button"
     };
 
     /**
@@ -711,10 +712,10 @@ public final class PostSwipe {
     }
 
     /**
-     * @return The part of a rect that no bar of the screen is drawn over, or null if there is none. A bar
-     * over the top of the rect moves its top down, a bar over its bottom moves its bottom up.
+     * @return The part of a rect that no bar of the screen is drawn over, or null if the finger is on a bar.
+     * A bar above the finger moves the top of the rect down, a bar below it moves the bottom up.
      */
-    static Rect withoutBars(Rect rect) {
+    static Rect withoutBars(Rect rect, float y) {
         Rect visible = new Rect(rect);
         try {
             List<Object> coordinates;
@@ -726,10 +727,12 @@ public final class PostSwipe {
                 if (bar == null || !Rect.intersects(bar, visible)) continue;
                 // A bar that holds the whole rect is a screen, not a bar over it.
                 if (bar.contains(visible)) continue;
-                if (bar.centerY() < visible.centerY()) {
+                if (bar.bottom <= y) {
                     visible.top = Math.max(visible.top, bar.bottom);
-                } else {
+                } else if (bar.top > y) {
                     visible.bottom = Math.min(visible.bottom, bar.top);
+                } else {
+                    return null;
                 }
                 if (visible.height() <= 0) return null;
             }
