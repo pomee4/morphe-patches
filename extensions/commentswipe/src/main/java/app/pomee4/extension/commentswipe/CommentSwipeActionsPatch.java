@@ -623,7 +623,7 @@ public final class CommentSwipeActionsPatch {
                         state = IGNORED;
                         return false;
                     }
-                    startSwipe(event, current, rightToLeft, actions);
+                    startSwipe(event, current);
                     if (overlay != null) overlay.update(dx);
                     return true;
                 }
@@ -642,7 +642,7 @@ public final class CommentSwipeActionsPatch {
             }
         }
 
-        private void startSwipe(MotionEvent event, Press current, boolean rightToLeft, SwipeAction[] actions) {
+        private void startSwipe(MotionEvent event, Press current) {
             state = SWIPING;
             press = current;
 
@@ -655,7 +655,7 @@ public final class CommentSwipeActionsPatch {
             int left = Math.round(downX - current.x);
             int top = Math.round(downY - current.y);
             Rect bounds = new Rect(left, top, left + current.width, top + current.height);
-            overlay = new SwipeOverlay(activity, bounds, rightToLeft, actions);
+            overlay = new SwipeOverlay(activity, bounds, actionsFor(true), actionsFor(false));
         }
 
         private void finishSwipe(boolean perform) {
@@ -687,21 +687,28 @@ public final class CommentSwipeActionsPatch {
      */
     private static final class SwipeOverlay {
         private final Activity activity;
-        private final boolean rightToLeft;
         /**
-         * The actions of the swipe direction, one per stage: one or two.
+         * The actions of each swipe direction, one per stage: none, one or two.
          */
-        private final SwipeAction[] actions;
+        private final SwipeAction[] leftActions;
+        private final SwipeAction[] rightActions;
+        /**
+         * The direction the comment is swiped now. It changes when the finger crosses the start.
+         */
+        private boolean rightToLeft;
+        private SwipeAction[] actions;
         private final int width;
         private final FrameLayout container;
         private final ImageView copy;
         private final TextView label;
         int stage;
 
-        SwipeOverlay(Activity activity, Rect bounds, boolean rightToLeft, SwipeAction[] actions) {
+        SwipeOverlay(Activity activity, Rect bounds, SwipeAction[] leftActions, SwipeAction[] rightActions) {
             this.activity = activity;
-            this.rightToLeft = rightToLeft;
-            this.actions = actions;
+            this.leftActions = leftActions;
+            this.rightActions = rightActions;
+            this.rightToLeft = leftActions.length > 0;
+            this.actions = rightToLeft ? leftActions : rightActions;
             this.width = bounds.width();
 
             container = new FrameLayout(activity);
@@ -714,7 +721,7 @@ public final class CommentSwipeActionsPatch {
             label.setTextColor(Color.WHITE);
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
             label.setPadding(padding, 0, padding, 0);
-            label.setGravity(Gravity.CENTER_VERTICAL | (rightToLeft ? Gravity.END : Gravity.START));
+            setLabelSide();
             container.addView(label, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -743,21 +750,39 @@ public final class CommentSwipeActionsPatch {
         }
 
         void update(float dx) {
+            // The finger can cross the start of the swipe and go on to the other direction.
+            boolean directionChanged = false;
+            if (dx != 0 && (dx < 0) != rightToLeft) {
+                rightToLeft = dx < 0;
+                actions = rightToLeft ? leftActions : rightActions;
+                setLabelSide();
+                directionChanged = true;
+            }
+
+            // A direction with no actions does not move: the comment stays at its start.
             float max = width * MAX_SWIPE_FRACTION;
-            float distance = Math.min(Math.abs(dx), max);
+            float distance = actions.length == 0 ? 0 : Math.min(Math.abs(dx), max);
             copy.setTranslationX(rightToLeft ? -distance : distance);
 
             int newStage = 0;
             for (int i = 0; i < actions.length; i++) {
                 if (distance >= width * STAGE_STARTS[i]) newStage = i + 1;
             }
-            if (newStage != stage) {
+            if (newStage != stage || directionChanged) {
+                boolean vibrate = newStage != stage || newStage > 0;
                 setStage(newStage);
-                if (Settings.COMMENT_SWIPE_VIBRATE.get()) {
+                if (vibrate && Settings.COMMENT_SWIPE_VIBRATE.get()) {
                     container.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK,
                             HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
                 }
             }
+        }
+
+        /**
+         * The action label is on the side the swiped comment uncovers.
+         */
+        private void setLabelSide() {
+            label.setGravity(Gravity.CENTER_VERTICAL | (rightToLeft ? Gravity.END : Gravity.START));
         }
 
         /**
