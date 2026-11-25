@@ -1,34 +1,38 @@
 package app.pomee4.extension.commentswipe;
 
-import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeAction;
-
 /**
- * Texts of the swipe actions and the settings screen (English).
+ * Texts of the swipe actions of comments and posts, by action name (English).
  */
 final class Labels {
     private Labels() {
     }
 
-    static String action(SwipeAction action) {
-        switch (action) {
-            case UPVOTE:
+    static String action(Enum<?> action) {
+        switch (action == null ? "NONE" : action.name()) {
+            case "UPVOTE":
                 return "Upvote";
-            case DOWNVOTE:
+            case "DOWNVOTE":
                 return "Downvote";
-            case REPLY:
+            case "REPLY":
                 return "Reply";
-            case SAVE:
+            case "SAVE":
                 return "Save";
-            case SHARE:
+            case "SHARE":
                 return "Share";
-            case TOGGLE_COLLAPSE:
+            case "TOGGLE_COLLAPSE":
                 return "Collapse";
-            case COLLAPSE:
+            case "COLLAPSE":
                 return "Collapse thread";
-            case OVERFLOW:
+            case "OVERFLOW":
                 return "More options";
-            case PROFILE:
+            case "PROFILE":
                 return "Open profile";
+            case "HIDE":
+                return "Hide";
+            case "OPEN_COMMENTS":
+                return "Open comments";
+            case "SUBREDDIT":
+                return "Open subreddit";
             default:
                 return "None";
         }

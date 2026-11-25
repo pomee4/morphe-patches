@@ -47,15 +47,15 @@ private val settingsActivityPatch = resourcePatch {
 
 @Suppress("unused")
 val commentSwipeActionsPatch = bytecodePatch(
-    name = "Comment swipe actions",
-    description = "Adds swipe actions to comments: swipe a comment left or right to upvote, downvote, " +
-        "reply, save, share, collapse or open the author's profile. Each direction has a first and a " +
-        "second action, picked by how far it is swiped. " +
-        "Settings: Reddit settings, General, Comment swipe."
+    name = "Swipe actions",
+    description = "Adds swipe actions to comments and posts: swipe left or right to vote, save, " +
+        "reply, hide, share, collapse and more. Each direction has a first and a second action, picked by " +
+        "how far it is swiped. Posts swipe in feeds, subreddits, profiles, saved posts and history. " +
+        "Settings: Reddit settings, General, Swipe actions."
 ) {
     compatibleWith(COMPATIBILITY_REDDIT)
 
-    dependsOn(settingsActivityPatch, settingsRowPatch)
+    dependsOn(settingsActivityPatch, settingsRowPatch, postSwipePatch)
 
     // The extension is added by settingsRowPatch.
 

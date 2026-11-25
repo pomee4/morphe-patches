@@ -26,10 +26,11 @@ import android.preference.SwitchPreference;
 import java.util.Collections;
 
 import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeAction;
+import app.pomee4.extension.commentswipe.PostSwipe.PostAction;
 
 /**
- * Settings screen of the comment swipe actions. Added to the manifest during patching and opened
- * from the "Comment swipe" row of the Reddit settings (General section).
+ * Settings screen of the swipe actions of comments and posts. Added to the manifest during patching and
+ * opened from the "Swipe actions" row of the Reddit settings (General section).
  */
 @SuppressWarnings("deprecation")
 public final class SettingsActivity extends Activity {
@@ -51,7 +52,7 @@ public final class SettingsActivity extends Activity {
         }
     }
 
-    private static final String TITLE = "Comment swipe";
+    private static final String TITLE = "Swipe actions";
 
     /**
      * If the screen uses the settings style of the Morphe Patches, like the Morphe settings.
@@ -181,41 +182,65 @@ public final class SettingsActivity extends Activity {
             PreferenceScreen screen = getPreferenceManager().createPreferenceScreen(context);
             setPreferenceScreen(screen);
 
-            SwitchPreference enabled = new SwitchPreference(context);
-            enabled.setKey(Settings.COMMENT_SWIPE_ACTIONS.key);
-            enabled.setDefaultValue(Settings.COMMENT_SWIPE_ACTIONS.defaultValue);
-            enabled.setTitle("Comment swipe actions");
-            enabled.setSummary("Swipe a comment left or right to vote, save, reply and more. How far you swipe picks the first or second action");
-            screen.addPreference(enabled);
-
-            addDirection(context, screen, enabled, "Swipe left", Settings.LEFT_FIRST, Settings.LEFT_SECOND);
-            addDirection(context, screen, enabled, "Swipe right", Settings.RIGHT_FIRST, Settings.RIGHT_SECOND);
+            addKind(context, screen, "Comments", Settings.COMMENT_SWIPE_ACTIONS, "Comment swipe actions",
+                    "Swipe a comment left or right to vote, save, reply and more. How far you swipe picks the first or second action",
+                    SwipeAction.values(), Settings.LEFT_FIRST, Settings.LEFT_SECOND,
+                    Settings.RIGHT_FIRST, Settings.RIGHT_SECOND);
+            addKind(context, screen, "Posts", Settings.POST_SWIPE_ACTIONS, "Post swipe actions",
+                    "Swipe a post left or right in feeds, subreddits, profiles and saved posts to vote, save, hide and more",
+                    PostAction.values(), Settings.POST_LEFT_FIRST, Settings.POST_LEFT_SECOND,
+                    Settings.POST_RIGHT_FIRST, Settings.POST_RIGHT_SECOND);
 
             PreferenceCategory other = new PreferenceCategory(context);
             other.setTitle("Feedback");
             screen.addPreference(other);
-            Preference vibrate = vibratePreference(context);
-            other.addPreference(vibrate);
-            vibrate.setDependency(enabled.getKey());
+            other.addPreference(vibratePreference(context));
         }
 
-        private static void addDirection(Context context, PreferenceScreen screen, Preference enabled, String title,
-                                         Settings.EnumSetting<SwipeAction> first,
-                                         Settings.EnumSetting<SwipeAction> second) {
+        /**
+         * The switch and the swipe directions of comments or posts.
+         */
+        private static <T extends Enum<T>> void addKind(Context context, PreferenceScreen screen, String title,
+                                                        Settings.BooleanSetting enabledSetting, String switchTitle,
+                                                        String switchSummary, T[] values,
+                                                        Settings.EnumSetting<T> leftFirst,
+                                                        Settings.EnumSetting<T> leftSecond,
+                                                        Settings.EnumSetting<T> rightFirst,
+                                                        Settings.EnumSetting<T> rightSecond) {
             PreferenceCategory category = new PreferenceCategory(context);
             category.setTitle(title);
             screen.addPreference(category);
 
-            ListPreference firstPreference = actionPreference(context, first, "First action");
+            SwitchPreference enabled = new SwitchPreference(context);
+            enabled.setKey(enabledSetting.key);
+            enabled.setDefaultValue(enabledSetting.defaultValue);
+            enabled.setTitle(switchTitle);
+            enabled.setSummary(switchSummary);
+            category.addPreference(enabled);
+
+            addDirection(context, screen, enabled, title + ": swipe left", values, leftFirst, leftSecond);
+            addDirection(context, screen, enabled, title + ": swipe right", values, rightFirst, rightSecond);
+        }
+
+        private static <T extends Enum<T>> void addDirection(Context context, PreferenceScreen screen,
+                                                             Preference enabled, String title, T[] values,
+                                                             Settings.EnumSetting<T> first,
+                                                             Settings.EnumSetting<T> second) {
+            PreferenceCategory category = new PreferenceCategory(context);
+            category.setTitle(title);
+            screen.addPreference(category);
+
+            ListPreference firstPreference = actionPreference(context, values, first, "First action");
             category.addPreference(firstPreference);
             firstPreference.setDependency(enabled.getKey());
 
-            ListPreference secondPreference = actionPreference(context, second, "Second action");
+            ListPreference secondPreference = actionPreference(context, values, second, "Second action");
             category.addPreference(secondPreference);
             secondPreference.setDependency(enabled.getKey());
             updateSecondSummary(secondPreference, second.get());
             secondPreference.setOnPreferenceChangeListener((preference, value) -> {
-                updateSecondSummary((ListPreference) preference, SwipeAction.valueOf((String) value));
+                updateSecondSummary((ListPreference) preference,
+                        Enum.valueOf(second.defaultValue.getDeclaringClass(), (String) value));
                 return true;
             });
         }
@@ -223,15 +248,15 @@ public final class SettingsActivity extends Activity {
         /**
          * Explains what a longer swipe does when the second action is None.
          */
-        private static void updateSecondSummary(ListPreference preference, SwipeAction action) {
-            preference.setSummary(action == SwipeAction.NONE
+        private static void updateSecondSummary(ListPreference preference, Enum<?> action) {
+            preference.setSummary(action.name().equals("NONE")
                     ? "None: any swipe distance does the first action. Set both to None to turn off this direction"
                     : Labels.action(action) + ", on a longer swipe");
         }
 
-        private static ListPreference actionPreference(Context context,
-                                                       Settings.EnumSetting<SwipeAction> setting, String title) {
-            SwipeAction[] values = SwipeAction.values();
+        private static <T extends Enum<T>> ListPreference actionPreference(Context context, T[] values,
+                                                                           Settings.EnumSetting<T> setting,
+                                                                           String title) {
             String[] entries = new String[values.length];
             String[] entryValues = new String[values.length];
             for (int i = 0; i < values.length; i++) {

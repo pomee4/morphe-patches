@@ -203,3 +203,39 @@ internal class IconComposableFingerprint(iconDataType: String) : Fingerprint(
     returnType = "V",
     parameters = listOf(iconDataType, "Ljava/lang/String;", "L", "J", "Z", "L", "I", "I")
 )
+
+/**
+ * The section of a post in every Reddit post list, by its toString.
+ */
+internal object FeedPostSectionToStringFingerprint : Fingerprint(
+    name = "toString",
+    returnType = "Ljava/lang/String;",
+    parameters = listOf(),
+    filters = listOf(
+        string("FeedPostSection(linkId=", StringComparisonType.STARTS_WITH)
+    )
+)
+
+/**
+ * The main constructor of Link (a post), the one that sets every field.
+ */
+internal object LinkConstructorFingerprint : Fingerprint(
+    definingClass = "Lcom/reddit/domain/model/Link;",
+    name = "<init>",
+    filters = listOf(
+        fieldAccess(
+            opcode = Opcode.IPUT_BOOLEAN,
+            definingClass = "this",
+            name = "saved"
+        )
+    )
+)
+
+/**
+ * The Open comments event of feed posts.
+ */
+internal object OpenCommentsEventFingerprint : Fingerprint(
+    definingClass = "Lcom/reddit/feeds/impl/ui/events/OnClickOpenComments;",
+    name = "toString",
+    returnType = "Ljava/lang/String;",
+)

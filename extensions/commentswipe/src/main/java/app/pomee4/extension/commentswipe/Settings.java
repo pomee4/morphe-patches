@@ -4,9 +4,10 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import app.pomee4.extension.commentswipe.CommentSwipeActionsPatch.SwipeAction;
+import app.pomee4.extension.commentswipe.PostSwipe.PostAction;
 
 /**
- * Comment swipe settings, kept in their own preferences file so they do not depend on
+ * Swipe action settings of comments and posts, kept in their own preferences file so they do not depend on
  * the settings of other patches. Edited in {@link SettingsActivity}.
  */
 public final class Settings {
@@ -27,6 +28,22 @@ public final class Settings {
             new EnumSetting<>("comment_swipe_right_first", SwipeAction.TOGGLE_COLLAPSE);
     public static final EnumSetting<SwipeAction> RIGHT_SECOND =
             new EnumSetting<>("comment_swipe_right_second", SwipeAction.REPLY);
+    public static final BooleanSetting POST_SWIPE_ACTIONS = new BooleanSetting("post_swipe_actions", true);
+    /**
+     * Swipe a post left: upvote, or downvote on a longer swipe, the same as comments.
+     */
+    public static final EnumSetting<PostAction> POST_LEFT_FIRST =
+            new EnumSetting<>("post_swipe_left_first", PostAction.UPVOTE);
+    public static final EnumSetting<PostAction> POST_LEFT_SECOND =
+            new EnumSetting<>("post_swipe_left_second", PostAction.DOWNVOTE);
+    /**
+     * Swipe a post right: save it for later, or hide it on a longer swipe.
+     */
+    public static final EnumSetting<PostAction> POST_RIGHT_FIRST =
+            new EnumSetting<>("post_swipe_right_first", PostAction.SAVE);
+    public static final EnumSetting<PostAction> POST_RIGHT_SECOND =
+            new EnumSetting<>("post_swipe_right_second", PostAction.HIDE);
+
     public static final BooleanSetting COMMENT_SWIPE_VIBRATE = new BooleanSetting("comment_swipe_vibrate", true);
 
     // Settings of versions with one swipe direction and three actions, moved by migrate().

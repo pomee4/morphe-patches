@@ -25,7 +25,7 @@ import kotlin.jvm.functions.Function2;
 public final class SettingsRow {
     private static final String ROW_KEY = "pomee4_comment_swipe_settings";
     private static final String PRIVACY_POLICY_ROW_KEY = "key_pref_privacy_policy";
-    private static final String ROW_LABEL = "Comment swipe";
+    private static final String ROW_LABEL = "Swipe actions";
     private static final String ICON_DRAWABLE = "pomee4_comment_swipe_settings_icon";
 
     private static final Function2<Object, Object, Object> ICON = new IconComposable();

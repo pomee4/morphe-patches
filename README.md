@@ -23,24 +23,27 @@ Then patch the app with both Morphe Patches and pomee4 Patches selected.
 | 2 | [**Reddit**](PATCHES.md#reddit-comredditfrontpage) | 1 | `experimental 2026.46.0`, `experimental 2026.45.0`, `experimental 2026.44.0`, `2026.40.0` | [`com.reddit.frontpage`](https://play.google.com/store/apps/details?id=com.reddit.frontpage) |
 <!-- PATCHES_END -->
 
-### Reddit: Comment swipe actions
+### Reddit: Swipe actions
 
-Swipe a comment left or right to upvote, downvote, reply, save, share, collapse it, collapse the thread,
-open the overflow menu or open the author's profile. Each direction has a first and a second action: a
-short swipe does the first, a longer swipe the second.
+Swipe comments and posts left or right, like in Sync for Reddit. Each direction has a first and a second
+action: a short swipe does the first, a longer swipe the second.
 
-- If the second action is **None**, any swipe distance does the first action.
-- If both actions of a direction are **None**, comments do not swipe that way.
-- **Collapse** works like a tap on the comment: it collapses the comment and its replies, and swiping a
+- **Comments:** upvote, downvote, reply, save, share, collapse, collapse thread, more options, open profile.
+  Defaults: swipe left to upvote (downvote on a longer swipe), swipe right to collapse (reply).
+- **Posts**, in every post list (home, popular, subreddits, custom feeds, profiles, saved posts, history):
+  upvote, downvote, save, hide, share, open comments, more options, open profile, open subreddit.
+  Defaults: swipe left to upvote (downvote), swipe right to save (hide). Posts with a gallery or a carousel
+  keep their own horizontal swipe. Search results are not supported yet.
+- Votes and Save toggle: swiping again undoes them. A hidden post can be brought back with Reddit's Undo.
+- If the second action is **None**, any swipe distance does the first action. If both actions of a direction
+  are **None**, that direction does not swipe. Swiping back past the start switches to the other direction.
+- **Collapse** works like a tap on a comment: it collapses the comment and its replies, and swiping a
   collapsed comment expands it again. It also works on top-level comments.
 
-**Settings:** in Reddit, open **Settings** and tap **Comment swipe** in the **General** section, under
-**Morphe**. There you can turn the swipe actions on or off, pick the first, second and third action, the
-swipe direction and whether each action vibrates. The settings row needs the Morphe Patches settings of
-Reddit 2026.30.0 or newer, which every Reddit patch of Morphe Patches applies.
-
-The patch has its own extension and settings, so it does not depend on the Reddit patches of Morphe
-Patches and keeps working when they change.
+**Settings:** in Reddit, open **Settings** and tap **Swipe actions** in the **General** section, under
+**Morphe**. Comments and posts each have an on/off switch and their two directions. The settings row and
+the settings style need the Morphe Patches for Reddit 2026.30.0 or newer, which every Reddit patch of Morphe
+Patches applies.
 
 Supported Reddit versions: the same as Morphe Patches (2026.40.0, 2026.44.0 - 2026.46.0).
 

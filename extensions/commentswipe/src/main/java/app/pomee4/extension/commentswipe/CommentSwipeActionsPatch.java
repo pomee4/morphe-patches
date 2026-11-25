@@ -440,13 +440,28 @@ public final class CommentSwipeActionsPatch {
      * @return The actions of the direction that are not None: none, one or two. One action is done at
      * any swipe distance, so a long swipe never ends on nothing.
      */
-    private static SwipeAction[] actionsFor(boolean leftSwipe) {
-        SwipeAction first = (leftSwipe ? Settings.LEFT_FIRST : Settings.RIGHT_FIRST).get();
-        SwipeAction second = (leftSwipe ? Settings.LEFT_SECOND : Settings.RIGHT_SECOND).get();
-        if (first == SwipeAction.NONE && second == SwipeAction.NONE) return new SwipeAction[0];
-        if (first == SwipeAction.NONE) return new SwipeAction[]{second};
-        if (second == SwipeAction.NONE) return new SwipeAction[]{first};
-        return new SwipeAction[]{first, second};
+    private static Enum<?>[] commentActions(boolean leftSwipe) {
+        return actions((leftSwipe ? Settings.LEFT_FIRST : Settings.RIGHT_FIRST).get(),
+                (leftSwipe ? Settings.LEFT_SECOND : Settings.RIGHT_SECOND).get());
+    }
+
+    /**
+     * @see #commentActions(boolean)
+     */
+    private static Enum<?>[] postActions(boolean leftSwipe) {
+        return actions((leftSwipe ? Settings.POST_LEFT_FIRST : Settings.POST_RIGHT_FIRST).get(),
+                (leftSwipe ? Settings.POST_LEFT_SECOND : Settings.POST_RIGHT_SECOND).get());
+    }
+
+    private static Enum<?>[] actions(Enum<?> first, Enum<?> second) {
+        if (isNone(first) && isNone(second)) return new Enum<?>[0];
+        if (isNone(first)) return new Enum<?>[]{second};
+        if (isNone(second)) return new Enum<?>[]{first};
+        return new Enum<?>[]{first, second};
+    }
+
+    static boolean isNone(Enum<?> action) {
+        return action == null || action.name().equals("NONE");
     }
 
     private static void perform(Activity activity, Row row, SwipeAction action) {
@@ -514,31 +529,34 @@ public final class CommentSwipeActionsPatch {
         activity.startActivity(intent);
     }
 
-    private static int actionColor(SwipeAction action) {
-        switch (action) {
-            case UPVOTE:
+    /**
+     * Background color of an action of a comment or a post, by its name.
+     */
+    private static int actionColor(Enum<?> action) {
+        switch (action == null ? "NONE" : action.name()) {
+            case "UPVOTE":
                 return 0xFFFF4500;
-            case DOWNVOTE:
+            case "DOWNVOTE":
                 return 0xFF7193FF;
-            case REPLY:
+            case "REPLY":
+            case "OPEN_COMMENTS":
                 return 0xFF46D160;
-            case SAVE:
+            case "SAVE":
                 return 0xFFFFB000;
-            case SHARE:
+            case "SHARE":
+            case "SUBREDDIT":
                 return 0xFF0079D3;
-            case PROFILE:
+            case "PROFILE":
                 return 0xFF9C6ADE;
-            case TOGGLE_COLLAPSE:
-            case COLLAPSE:
-            case OVERFLOW:
+            case "HIDE":
+                return 0xFFD93A00;
+            case "TOGGLE_COLLAPSE":
+            case "COLLAPSE":
+            case "OVERFLOW":
                 return 0xFF878A8C;
             default:
                 return 0xFF5C5C5C;
         }
-    }
-
-    private static String actionLabel(SwipeAction action) {
-        return Labels.action(action);
     }
 
     // endregion
@@ -561,6 +579,7 @@ public final class CommentSwipeActionsPatch {
         private float downY;
         private long downTime;
         private Press press;
+        private PostSwipe.Target post;
         private SwipeOverlay overlay;
 
         SwipeWindowCallback(Activity activity, Window.Callback wrapped) {
@@ -575,7 +594,7 @@ public final class CommentSwipeActionsPatch {
         public boolean dispatchTouchEvent(MotionEvent event) {
             try {
                 if (handleTouch(event)) return true;
-            } catch (Exception ex) {
+            } catch (Throwable ex) {
                 Logger.printException(() -> "Swipe touch failure", ex);
                 state = IGNORED;
                 removeOverlay();
@@ -589,12 +608,14 @@ public final class CommentSwipeActionsPatch {
                     removeOverlay();
                     lastPress = null;
                     press = null;
+                    post = null;
                     downX = event.getX();
                     downY = event.getY();
                     downTime = SystemClock.uptimeMillis();
                     View decor = activity.getWindow().getDecorView();
                     boolean atEdge = downX < edgeExclusion || downX > decor.getWidth() - edgeExclusion;
-                    state = !isEnabled() || atEdge ? IGNORED : IDLE;
+                    boolean enabled = isEnabled() || Settings.POST_SWIPE_ACTIONS.get();
+                    state = !enabled || atEdge ? IGNORED : IDLE;
                     return false;
                 }
                 case MotionEvent.ACTION_POINTER_DOWN:
@@ -617,13 +638,29 @@ public final class CommentSwipeActionsPatch {
                     if (Math.abs(dx) < touchSlop * 1.5f || Math.abs(dx) < Math.abs(dy) * 2) return false;
 
                     boolean rightToLeft = dx < 0;
-                    SwipeAction[] actions = actionsFor(rightToLeft);
                     Press current = lastPress;
-                    if (actions.length == 0 || current == null || current.time < downTime) {
-                        state = IGNORED;
-                        return false;
+                    if (current != null && current.time >= downTime && isEnabled()) {
+                        // A comment: its row told where the finger went down.
+                        if (commentActions(rightToLeft).length == 0) {
+                            state = IGNORED;
+                            return false;
+                        }
+                        int left = Math.round(downX - current.x);
+                        int top = Math.round(downY - current.y);
+                        press = current;
+                        startSwipe(event, new Rect(left, top, left + current.width, top + current.height),
+                                commentActions(true), commentActions(false));
+                    } else {
+                        // A post: the card under the finger.
+                        PostSwipe.Target target = Settings.POST_SWIPE_ACTIONS.get()
+                                ? PostSwipe.findTarget(downX, downY) : null;
+                        if (target == null || postActions(rightToLeft).length == 0) {
+                            state = IGNORED;
+                            return false;
+                        }
+                        post = target;
+                        startSwipe(event, target.bounds, postActions(true), postActions(false));
                     }
-                    startSwipe(event, current);
                     if (overlay != null) overlay.update(dx);
                     return true;
                 }
@@ -642,9 +679,8 @@ public final class CommentSwipeActionsPatch {
             }
         }
 
-        private void startSwipe(MotionEvent event, Press current) {
+        private void startSwipe(MotionEvent event, Rect bounds, Enum<?>[] leftActions, Enum<?>[] rightActions) {
             state = SWIPING;
-            press = current;
 
             // The comment list, the post pager and the tap detector stop following this touch.
             MotionEvent cancel = MotionEvent.obtain(event);
@@ -652,24 +688,26 @@ public final class CommentSwipeActionsPatch {
             super.dispatchTouchEvent(cancel);
             cancel.recycle();
 
-            int left = Math.round(downX - current.x);
-            int top = Math.round(downY - current.y);
-            Rect bounds = new Rect(left, top, left + current.width, top + current.height);
-            overlay = new SwipeOverlay(activity, bounds, actionsFor(true), actionsFor(false));
+            overlay = new SwipeOverlay(activity, bounds, leftActions, rightActions);
         }
 
         private void finishSwipe(boolean perform) {
             SwipeOverlay finished = overlay;
             Press finishedPress = press;
+            PostSwipe.Target finishedPost = post;
             overlay = null;
             press = null;
+            post = null;
             state = IGNORED;
             if (finished == null) return;
 
-            SwipeAction action = finished.action();
+            Enum<?> action = finished.action();
             finished.release(() -> {
-                if (perform && finishedPress != null && action != SwipeAction.NONE) {
-                    perform(activity, finishedPress.row, action);
+                if (!perform || isNone(action)) return;
+                if (finishedPress != null) {
+                    perform(activity, finishedPress.row, (SwipeAction) action);
+                } else if (finishedPost != null) {
+                    PostSwipe.perform(activity, finishedPost, (PostSwipe.PostAction) action);
                 }
             });
         }
@@ -690,20 +728,20 @@ public final class CommentSwipeActionsPatch {
         /**
          * The actions of each swipe direction, one per stage: none, one or two.
          */
-        private final SwipeAction[] leftActions;
-        private final SwipeAction[] rightActions;
+        private final Enum<?>[] leftActions;
+        private final Enum<?>[] rightActions;
         /**
          * The direction the comment is swiped now. It changes when the finger crosses the start.
          */
         private boolean rightToLeft;
-        private SwipeAction[] actions;
+        private Enum<?>[] actions;
         private final int width;
         private final FrameLayout container;
         private final ImageView copy;
         private final TextView label;
         int stage;
 
-        SwipeOverlay(Activity activity, Rect bounds, SwipeAction[] leftActions, SwipeAction[] rightActions) {
+        SwipeOverlay(Activity activity, Rect bounds, Enum<?>[] leftActions, Enum<?>[] rightActions) {
             this.activity = activity;
             this.leftActions = leftActions;
             this.rightActions = rightActions;
@@ -788,16 +826,16 @@ public final class CommentSwipeActionsPatch {
         /**
          * @return The action of the current stage, or None before the first stage.
          */
-        SwipeAction action() {
-            return stage > 0 ? actions[stage - 1] : SwipeAction.NONE;
+        Enum<?> action() {
+            return stage > 0 ? actions[stage - 1] : null;
         }
 
         private void setStage(int newStage) {
             stage = newStage;
-            SwipeAction action = action();
-            boolean active = action != SwipeAction.NONE;
-            container.setBackgroundColor(active ? actionColor(action) : actionColor(SwipeAction.NONE));
-            label.setText(active ? actionLabel(action) : "");
+            Enum<?> action = action();
+            boolean active = !isNone(action);
+            container.setBackgroundColor(actionColor(action));
+            label.setText(active ? Labels.action(action) : "");
         }
 
         void release(Runnable onReleased) {
