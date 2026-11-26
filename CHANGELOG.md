@@ -1,3 +1,9 @@
+## [3.3.2](https://github.com/pomee4/morphe-patches/compare/v3.3.1...v3.3.2) (2026-11-26)
+
+### 🐛 Bug Fixes
+
+* **Reddit:** Don't swipe feed posts from the full screen media viewer ([482eae5](https://github.com/pomee4/morphe-patches/commit/482eae5772b9de8d555e3d0a76c25515e34c8014))
+
 ## [3.3.1](https://github.com/pomee4/morphe-patches/compare/v3.3.0...v3.3.1) (2026-11-26)
 
 ### 🐛 Bug Fixes
