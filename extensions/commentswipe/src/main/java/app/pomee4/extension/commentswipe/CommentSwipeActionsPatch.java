@@ -623,7 +623,7 @@ public final class CommentSwipeActionsPatch {
                     boolean enabled = isEnabled() || Settings.POST_SWIPE_ACTIONS.get();
                     // Nothing behind an open side menu, sheet, menu, modal or dialog is swiped.
                     boolean covered = enabled && !atEdge && (!activity.hasWindowFocus()
-                            || PostSwipe.isOverlayOpen() || PostSwipe.isDrawerOpen(activity));
+                            || PostSwipe.isOverlayOpen(decor) || PostSwipe.isDrawerOpen(activity));
                     state = !enabled || atEdge || covered ? IGNORED : IDLE;
                     return false;
                 }
@@ -658,7 +658,8 @@ public final class CommentSwipeActionsPatch {
                         int top = Math.round(downY - current.y);
                         // The part of the comment under a bar of the screen is not swiped.
                         Rect visible = PostSwipe.withoutBars(
-                                new Rect(left, top, left + current.width, top + current.height), downY);
+                                new Rect(left, top, left + current.width, top + current.height), downY,
+                                activity.getWindow().getDecorView());
                         if (visible == null) {
                             state = IGNORED;
                             return false;
@@ -668,7 +669,7 @@ public final class CommentSwipeActionsPatch {
                     } else {
                         // A post: the card under the finger.
                         PostSwipe.Target target = Settings.POST_SWIPE_ACTIONS.get()
-                                ? PostSwipe.findTarget(downX, downY) : null;
+                                ? PostSwipe.findTarget(activity, downX, downY) : null;
                         // Only the part on screen slides: a post card can reach past the window.
                         View decor = activity.getWindow().getDecorView();
                         Rect visible = target == null ? null : new Rect(target.bounds);
