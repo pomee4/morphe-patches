@@ -1,3 +1,9 @@
+## [3.3.1](https://github.com/pomee4/morphe-patches/compare/v3.3.0...v3.3.1) (2026-11-26)
+
+### 🐛 Bug Fixes
+
+* **Reddit:** Fix a memory leak of comment pages in Swipe actions ([e8a222f](https://github.com/pomee4/morphe-patches/commit/e8a222f7c3e363a1cccabd401cee174f3f9d4227))
+
 ## [3.3.0](https://github.com/pomee4/morphe-patches/compare/v3.2.0...v3.3.0) (2026-11-25)
 
 ### ✨ New Features
