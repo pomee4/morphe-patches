@@ -104,12 +104,16 @@ public final class CommentSwipeActionsPatch {
 
     private static final class Row {
         final WeakReference<Object> scope;
-        final Object sink;
+        /**
+         * Weak: the rows map is weak by the row's callbacks, and a strong sink can reach them back,
+         * which keeps every comment page ever opened in memory.
+         */
+        final WeakReference<Object> sink;
         final String commentId;
 
         Row(Object scope, Object sink, String commentId) {
             this.scope = new WeakReference<>(scope);
-            this.sink = sink;
+            this.sink = new WeakReference<>(sink);
             this.commentId = commentId;
         }
     }
@@ -504,9 +508,11 @@ public final class CommentSwipeActionsPatch {
             }
             if (event == null) return;
 
-            Method onEvent = findOnEventMethod(row.sink.getClass());
-            if (onEvent == null) throw new IllegalStateException("No onEvent in " + row.sink.getClass());
-            onEvent.invoke(row.sink, event);
+            Object sink = row.sink.get();
+            if (sink == null) return;
+            Method onEvent = findOnEventMethod(sink.getClass());
+            if (onEvent == null) throw new IllegalStateException("No onEvent in " + sink.getClass());
+            onEvent.invoke(sink, event);
             Logger.printDebug(() -> "Swipe action " + action + " on " + id);
         } catch (Exception ex) {
             Logger.printException(() -> "Swipe action failure: " + action, ex);
